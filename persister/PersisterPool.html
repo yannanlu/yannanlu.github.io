@@ -1,0 +1,143 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> PersisterPool </B> </FONT>
+</CENTER>
+
+<p>
+PersisterPool is a JMS message consumer that creates, destroys and maintains
+multiple pools of on-demand persisters.  It listens to an XQueue for requests
+carried by ObjectMessages.  The incoming message is supposed to contain a task
+map with the URI and a transmit XQueue, etc.  PersisterPool evaluates the URI
+to figure out the details of the request.  If the request is to ask for a
+new persister, it first looks up the classname of the implementation based on
+the URI and the given properties.  Then PersisterPool tries to check out the
+pool of the classname from the cache.  If there exists the persister pool for
+the implementation, it just checks out a new instance of the persister
+with the given properties.  Otherwise, PersisterPool will create a new pool
+for the classname and checks out a new instance of the persister from it.
+It then starts up a new thread on the persister and returns the thread back.
+The requester is supposed to monitor the status of the thread in order to
+tell the status of the persister.  The requester is also able to control the
+persister via the associated transmit queue.  PersisterPool will frequently
+monitor the status of all active persisters in every heartbeat.  If any one
+of them is stopped or closed, PersisterPool will checkin the persister and
+clean up the cache.  If the request is to return the used thread, it will
+check in both the thread and the persister.
+</p>
+<p>
+URI is used to identify the destination and the implementation.  PersisterPool
+parses the URI string and creates a map with all XML properties from the
+key-value pairs specified in the query-string.  Therefore, requesters can add
+multiple properties to the query-string for a new persister.  In case the URI
+contains its own query-string, the URI separator, <b>&amp;URI=&amp;</b>, must
+be used to separate the original query-string and add-on properties. So please
+carefully define the add-on properties in the query-string of the URI.
+PersisterPool also allows the default properties defined for each
+implementation.  If any of the default properties is missing in the URI,
+PersisterPool will copy it to the XML property map before the instantiation
+of the MessagePersister.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for PersisterPool.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to check outstanding requests </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> MaxNumberPersister </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of persisters </TD> <TD> 32 (default: 256) </TD>
+</TR>
+<TR>
+<TD> DefaultPoolSize </TD> <TD> integer </TD> <TD> optional </TD> <TD> pool size for new persisters </TD> <TD> 8 (default: Capacity of the node) </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the URI </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> URIField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for URI </TD> <TD> (default: URI) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> DefaultProperty </TD> <TD> list </TD> <TD> optional </TD> <TD> list of default property map for new persisters </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where DefaultProperty defines the default properties for all the supported
+persisters.
+</p>
+
+<p>
+Here is an example of PersisterPool:
+
+<pre>
+{
+  "Name": "pstr_pool",
+  "ClassName": "org.qbroker.persister.PersisterPool",
+  "Operation": "accept",
+  "LinkName": "pool",
+  "Capacity": "256",
+  "XAMode": "1",
+  "MaxNumberPersister": "512",
+  "DefaultPoolSize": "64",
+  "Heartbeat": "60",
+  "DisplayMask": "0",
+  "StringProperty": {
+    "URI": "pool"
+  },
+  "DefaultProperty": [{
+    "ClassName": "org.qbroker.persister.StreamPersister",
+    "URI": "tcp://localhost:7227",
+    "Operation": "request",
+    "EOTBytes": "0x0a",
+    "KeepAlive": "true",
+    "SOTimeout": "60000",
+    "ReceiveTime": "1000",
+    "PauseTime": "1000",
+    "StandbyTime": "5000",
+    "RetryTimeout": "300",
+    "MaxIdleTime": "900",
+    "Template": "##body## ~ ReturnCode ~ ##ReturnCode##\n",
+    "Parser": {
+      "ClassName": "org.qbroker.event.EventParser"
+    },
+    "PoolSize": "256",
+    "DisplayMask": "0"
+  },{
+    "ClassName": "org.qbroker.persister.JMSPersister",
+    "URI": "wmq://localhost",
+    "QueueName": "YLU",
+    "Operation": "put",
+    "MaxIdleTime": "900",
+    "PoolSize": "256",
+    "DisplayMask": "0"
+  },{
+    "ClassName": "org.qbroker.persister.JMSPublisher",
+    "URI": "wmq://localhost",
+    "TopicName": "YLU",
+    "Operation": "pub",
+    "MaxIdleTime": "900",
+    "PoolSize": "128",
+    "DisplayMask": "0"
+  },{
+    "ClassName": "org.qbroker.persister.FilePersister",
+    "URI": "http://localhost:8080/",
+    "Operation": "download",
+    "MaxIdleTime": "900",
+    "PoolSize": "256",
+    "DisplayMask": "0"
+  }]
+}
+   </pre>
+</p>
+
+</body>
+</html>

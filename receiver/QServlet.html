@@ -1,0 +1,172 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> QServlet </B> </FONT>
+</CENTER>
+
+<p>
+QServlet is a JMS message producer that runs inside a Java Servlet engine, such
+as Tomcat. It accepts HTTP requests and converts them into JMS messages. The
+new JMS messages will be put into the internal XQueue of root as requests. Upon
+it receives the response back, the response will be formatted via the specific
+JSP and the result will be sent back the client. Therefore, it is the web front
+end of a message flow. Please be aware that QServlet is not an implementation
+of MessageReceiver. Therefore, it can not be used as a MessageReceiver in a
+normal message flow. It can be used only inside a Java Servlet engine.
+</p>
+<p>
+Since it is a Servlet, its configuration contains two parts. The first part is
+the web.xml of the webapp for the servlet container. The second part is the
+configuration files for the message flow. Here we will focus on its first part
+and how it interprets the HTTP requests.
+</p>
+<p>
+Here are the list of properties to define the servlet in web.xml.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH>Parent Block</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> servlet-name </TD> <TD> string </TD> <TD>servlet</TD> <TD> required </TD> <TD> name of the servlet </TD> <TD> rest </TD>
+</TR>
+<TR>
+<TD> servlet-class </TD> <TD> string </TD> <TD>servlet</TD> <TD> required </TD> <TD> full path of the classname for the servlet </TD> <TD> org.qbroker.flow.QServlet </TD>
+</TR>
+<TR>
+<TD> ConfigFile </TD> <TD> string </TD> <TD>init-param</TD> <TD> required </TD> <TD> full path of the master configuration file for the flow </TD> <TD> /opt/qbroker/flow/ID/Flow.json </TD>
+</TR>
+<TR>
+<TD> LoggerName </TD> <TD> string </TD> <TD>init-param</TD> <TD> required </TD> <TD> name of the log file for the flow </TD> <TD> QFlow_ID </TD>
+</TR>
+<TR>
+<TD> RestURI </TD> <TD> string </TD> <TD>init-param</TD> <TD> optional </TD> <TD> the path for the REST requests </TD> <TD> /id </TD>
+</TR>
+<TR>
+<TD> HeaderRegex </TD> <TD> string </TD> <TD>init-param</TD> <TD> optional </TD> <TD> the regex for selecting HTTP headers to be copied over to message </TD> <TD> .+ </TD>
+</TR>
+<TR>
+<TD> Timeout </TD> <TD> string </TD> <TD>init-param</TD> <TD> optional </TD> <TD> number of seconds to wait for the response back from the flow </TD> <TD> 600 </TD>
+</TR>
+<TR>
+<TD> servlet-name </TD> <TD> string </TD> <TD>servlet-mapping</TD> <TD> required </TD> <TD> name of the servlet for the mapping </TD> <TD> rest </TD>
+</TR>
+<TR>
+<TD> url-pattern </TD> <TD> string </TD> <TD>servlet-mapping</TD> <TD> required </TD> <TD> the pattern for the mapping </TD> <TD> /rest/* </TD>
+</TR>
+</TABLE>
+where RestURI is only optional.
+</p>
+
+<p>
+QServlet interprets the HTTP requests based on either the request type or the
+end point. For fileupload, the request will be multipart. If the content type
+is either "text/xml" or "application/json", the request will be processed as
+either the raw xml or raw json. In this case, the payload will be saved as
+the message body. The query parameters will be saved as the message properties.
+If HeaserRegex is defined, it will be used to select HTTP headers to copy over
+as the properties. Additionally, the IP of the request will be saved as the
+property of "_clientIP" and the request path info will be saved as JMSType.
+</p>
+<p>
+Other than the raw requests, QServlet interprets the requests based on the end
+points. If RestURI is defined in web.xml, all the requests with the end points
+starting with the RestURI will be treated as REST requests. For REST requests,
+the query parameters will be saved as the message properties except for the
+parameter with the name of "text". The value of "text" will be saved as the
+message body. Additionally, the IP of the request client will be saved to the
+property of "_clientIP". The request path info will also be saved to JMSType.
+</p>
+<p>
+Apart from the end ponit starting with the RestURI, QServlet also supports other
+end points for various interpretations. Here is the list of them:
+<TABLE border=1>
+<TR>
+<TH> End Point </TH> <TH>Interpretation</TH> <TH> Description </TH>
+</TR>
+<TR>
+<TD> /collectible </TD> <TD> EventPostable </TD> <TD> jms events for collectibles </TD>
+</TR>
+<TR>
+<TD> /jms </TD> <TD> EventPostable </TD> <TD> jms event not for collectibles </TD>
+</TR>
+<TR>
+<TD> /event </TD> <TD> EventPostable </TD> <TD> non-jms event </TD>
+</TR>
+<TR>
+<TD> /json </TD> <TD> JSON </TD> <TD> json form data for post only </TD>
+</TR>
+<TR>
+<TD> /xml </TD> <TD> XML </TD> <TD> xml form data for post only </TD>
+</TR>
+<TR>
+<TD> /stream </TD> <TD> byte stream </TD> <TD> jms event for stream operations </TD>
+</TR>
+</TABLE>
+where EventPostable is a special serialization for QBroker Event. In case of
+the end point is either /json or /xml for post, the data at the key of either
+"json" or "xml" will be saved as the message body. The request path info will
+be saved to the message property of "path". The client IP will be saved to the
+property of "hostname". The content type will be saved to the property of
+"type".
+</p>
+
+<p>
+For the end point not in the above table, the request will be treated as ad hoc
+request.
+</p>
+
+<p>
+Here is an example of web.xml:
+
+<table class="code" width="700">
+ <tr>
+  <td class="code">
+   <pre>
+&lt;?xml version="1.0" encoding="ISO-8859-1"?&gt;
+&lt;!DOCTYPE web-app
+PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+"http://java.sun.com/j2ee/dtds/web-app_2_3.dtd"&gt;
+&lt;web-app&gt;
+  &lt;display-name&gt;IdService&lt;/display-name&gt;
+  &lt;context-param&gt;
+    &lt;param-name&gt;webAppRootKey&lt;/param-name&gt;
+    &lt;param-value&gt;id.root&lt;/param-value&gt;
+  &lt;/context-param&gt;
+  &lt;servlet&gt;
+    &lt;servlet-name&gt;rest&lt;/servlet-name&gt;
+    &lt;servlet-class&gt;org.qbroker.flow.QServlet&lt;/servlet-class&gt;
+    &lt;init-param&gt;
+      &lt;param-name&gt;ConfigFile&lt;/param-name&gt;
+      &lt;param-value&gt;/opt/qbroker/flow/ID/Flow.json&lt;/param-value&gt;
+    &lt;/init-param&gt;
+    &lt;init-param&gt;
+      &lt;param-name&gt;LoggerName&lt;/param-name&gt;
+      &lt;param-value&gt;QFlow_ID&lt;/param-value&gt;
+    &lt;/init-param&gt;
+    &lt;init-param&gt;
+      &lt;param-name&gt;RestURI&lt;/param-name&gt;
+      &lt;param-value&gt;/id&lt;/param-value&gt;
+    &lt;/init-param&gt;
+    &lt;init-param&gt;
+      &lt;param-name&gt;Timeout&lt;/param-name&gt;
+      &lt;param-value&gt;600&lt;/param-value&gt;
+    &lt;/init-param&gt;
+    &lt;load-on-startup&gt;10&lt;/load-on-startup&gt;
+  &lt;/servlet&gt;
+  &lt;servlet-mapping&gt;
+    &lt;servlet-name&gt;rest&lt;/servlet-name&gt;
+    &lt;url-pattern&gt;/rest/*&lt;/url-pattern&gt;
+  &lt;/servlet-mapping&gt;
+&lt;/web-app&gt;
+   </pre>
+  </td>
+ </tr>
+</table>
+</p>
+
+</body>
+</html>

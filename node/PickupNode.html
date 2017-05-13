@@ -1,0 +1,395 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> PickupNode </B> </FONT>
+</CENTER>
+
+<p>
+PickupNode listens to an input XQ for JMS messages with an arbitrary URI
+as a request to retrieve messages. For each incoming message, the URI
+identifies the data source. PickupNode looks it up in the local cache for
+any XQueue as the transmit queue established for the data source. If there is
+an XQueue in the cache for the data source, PickupNode just packs up all the
+messages in the XQueue into the incoming message body and sends it back as
+the response. Otherwise, PickupNode will generate a new request with the
+URI and a newly created XQueue for the data source. The request will be sent
+to the outlink connected to a ReceiverPool for a new receiver thread.  Once
+the receiver is instantiated, PickupNode will collect the response from the
+ReceiverPool.  The response is supposed to contain the receiver thread for
+receiving the messages from the specific data source. PickupNode caches the
+thread and the id of the XQueue with the URI as the key.  Therefore, PickupNode
+is able to receive JMS messages via the receivers from arbitrary data sources
+based on their URIs and the predefined rulesets on-demand.  The received
+messages will be cached in their XQueues for picking up until they expires.
+</p>
+<img vspace=10 halign=center src="PickupNode.jpg" />
+<p>
+PickupNode has two types of outlinks, position-fixed and non-fixed.
+There are three position-fixed outlinks: pool for all requests to the
+ReceiverPool, failure for the messages failed in the request process,
+nohit for those messages not covered by any rulesets.  The non-fixed
+outlinks are transmit queues for the on-demand data sources.
+</p>
+<p>
+PickupNode also contains a number of predefined rulesets.  These
+rulesets categorize messages into non-overlapping groups.  Therefore,
+each rule defines a unique message group.  The ruleset also specifies
+the way to construct URI and properties for the new receivers.  For those
+messages falling off all defined rulesets, PickupNode always creates
+an extra ruleset, nohit, to handle them.  Therefore all the nohit messages
+will be routed to nohit outlink.  The downstream node at nohit is supposed
+to handle all nohit messages.
+</p>
+<p>
+URI is used to identify the data source.  In order to construct the URI
+for an arbitrary data source, each ruleset contains two sets of
+format operations.  The first one is the list of templates with the name
+of URITemplate.  The other is the list of substitutions with the name of
+URISubstitution.  URITemplate appends the previous non-empty text to URI
+and sets the next initial text for its corresponding URISubstitutions to
+modify.  The associations between the URITemplates and URISubstitutions are
+based on their positions.  Either URITemplate or URISubstitution can be
+null for no action and a place holder.  Therefore, you can insert multiple
+null URITemplates so that the associated URISubstitutions will be able to
+modify the same text in turns.  If any of the operations fails, the message
+will be routed to failure outlink.  Besides, a ruleset may contain a map
+of DefaultProperty as static or dynamic properties for the new receivers.
+If the URI string is not in the cache, PickupNode will try to resolve all
+the dynamic variables in the map of DefaultProperty from the incoming message
+first. Then it adds the DefaultProperty to the new request for the new receiver.
+So the extra properties are able to passed over to the receiver pool.
+</p>
+<p>
+For each new data source, PickupNode creates an Object message as
+the request containing the URI and the XQueue, as well as the default
+properties provided they are defined.  The request is sent to the
+ReceiverPool via the pool outlink.  Then PickupNode frequently checks the
+response for each outstanding requests.  The response is supposed to have
+the status and the receiver thread for the new data source. PickupNode
+will use the thread to monitor its status.  If the response does not have
+the thread, PickupNode will route the messages to the failure outlink and
+remove the XQueue and the URI from the cache. The samething will happen if
+the request for a new receiver times out.  MaxRetry is used to control
+when to timeout the request to the pool.  It also controls the timeout on
+a dead receiver thread.
+</p>
+<p>
+PickupNode also maintains an active set of XQueues as the receiving queues
+for all data sources.  In front of each XQueue, there is at least one
+receiver thread receiving the messages from the data source.  The
+messages are available for applications to pick up.  If PickupNode has not
+got any pickup requests for certain queues, it will mark them idle, no
+matter how many messages available.  All dynamic queues are monitored
+frequently in every heartbeat.  If one of them has been idle for over
+MaxIdleTime, the queue will be stopped.  Its receiver thread and the queue
+as well as the leftover messages will also be removed from cache.
+</p>
+<p>
+You are free to choose any names for the three fixed outlinks.  But
+PickupNode always assumes the first outlink for pool, the second for failure
+and the third for nohit.  The name for nohit is allowed to be overlapped with
+that of failure.  But neither nohit nor failure is allowed to share their names
+with pool.  The rest of the outlinks are for the on-demand data sources.
+</p>
+<p>
+Apart from the common properties, there are four implementation specific
+properties for PickupNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to check outstanding requests </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> MaxNumberReceiver </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of receivers </TD> <TD> 32 (default: 256) </TD>
+</TR>
+<TR>
+<TD> MaxRetry </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of retries </TD> <TD> 2 </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the field for return code </TD> <TD> </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+The pickup operation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of PickupNode.
+Here are complete properties of rulesets for PickupNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> MaxIdleTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of seconds of idle state </TD> <TD> 900 </TD>
+</TR>
+<TR>
+<TD> Capacity </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of connections </TD> <TD> 8 </TD>
+</TR>
+<TR>
+<TD> MaxRetry </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of retries </TD> <TD> 2 </TD>
+</TR>
+<TR>
+<TD> ResultTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for result </TD> <TD> ##body## </TD>
+</TR>
+<TR>
+<TD> URITemplate </TD> <TD> list </TD> <TD> optional </TD> <TD> list of templates for URI of new receivers </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> URISubstitution </TD> <TD> list </TD> <TD> optional </TD> <TD> list of subsctitutions for URI of new receivers </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> DefaultProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> default property map for new receivers </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where DefaultProperty may reference the properties of the incoming messages for
+the new receivers. This is the only way to pass over complex or hidden
+properties for new receivers.
+</p>
+<p>
+Here is an example of PickupNode:
+
+<pre>
+{
+  "Name": "node_pickup",
+  "ClassName": "org.qbroker.node.PickupNode",
+  "Description": "test",
+  "Operation": "pickup",
+  "LinkName": "pickup",
+  "Capacity": "32",
+  "MaxNumberReceiver": "512",
+  "Heartbeat": "60",
+  "MaxRetry": "2",
+  "DisplayMask": "0",
+  "XAMode": "1",
+  "Debug": "25",
+  "Ruleset": [{
+    "Name": "tcp",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "300",
+    "JMSPropertyGroup": [{
+      "asset": "^[^:]*$",
+      "Port": "^\\d+$"
+    }],
+    "URITemplate": [
+      "tcp://##asset##:##Port##",
+      "/?Operation=read",
+      "&user=##login##"
+    ],
+    "ResultTemplate": "##body##\n"
+  },{
+    "Name": "event",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "150",
+    "JMSPropertyGroup": [{
+      "short_name": "^EVENT$",
+      "asset": "^[^:]*$"
+    }],
+    "URITemplate": [
+      "tcp://##asset##:6625",
+      "/?Operation=read",
+      "&user=##login##"
+    ],
+    "DefaultProperty": {
+      "DestinationProperty": {
+        "URI": "log:///var/log/qbroker/QFlow_EVENT.log?Operation=fetch",
+        "TimePattern": "yyyy-MM-dd HH:mm:ss,SSS"
+      }
+    },
+    "ResultTemplate": "##body##\n"
+  },{
+    "Name": "win_mon",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "150",
+    "JMSPropertyGroup": "
+      "short_name": "^Agent$",
+      "asset": "^[^:]*$",
+      "logdir": "^[cC]:"
+    }],
+    "URITemplate": [
+      "tcp://##asset##:6625",
+      "/?Operation=read",
+      "&user=##login##&Agent=##service##"
+    ],
+    "DefaultProperty": {
+      "DestinationProperty": {
+        "URI": "log:///c:/home/qbroker/logs/MonitorAgent.log?Operation=fetch",
+        "TimePattern": "yyyy-MM-dd HH:mm:ss,SSS"
+      }
+    },
+    "ResultTemplate": "##body##\n"
+  },{
+  "Ruleset type="ARRAY"": "
+    "Name": "mon",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "150",
+    "JMSPropertyGroup": [{
+      "short_name": "^Agent$",
+      "asset": "^[^:]*$"
+    }],
+    "URITemplate": [
+      "tcp://##asset##:6625",
+      "/?Operation=read",
+      "&user=##login##&Agent=##service##"
+    ],
+    "DefaultProperty": {
+      "DestinationProperty": {
+        "URI": "log:///var/log/qbroker/MonitorAgent.log?Operation=fetch",
+        "TimePattern": "yyyy-MM-dd HH:mm:ss,SSS"
+      }
+    },
+    "ResultTemplate": "##body##\n"
+  },{
+    "Name": "wsh",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "150",
+    "JMSPropertyGroup": [{
+      "short_name": "^WSH$",
+      "asset": "^[^:]*$",
+      "logfile": ".",
+      "pattern": "."
+    }],
+    "URITemplate": [
+      "tcp://##asset##:6625",
+      "/?Operation=read",
+      "&user=##login##&WSH=##service##&name=##name##"
+    ],
+    "DefaultProperty": {
+      "DestinationProperty": {
+        "URI": "log://##logfile##?Operation=fetch",
+        "TimePattern": "##pattern##"
+      }
+    },
+    "ResultTemplate": "##body##\n"
+  },{
+    "Name": "admin",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "150",
+    "JMSPropertyGroup type="ARRAY"": "
+      "short_name": "^Console$",
+      "asset": "^[^:]*$"
+    }],
+    "URITemplate": [
+      "tcp://##asset##:6625",
+      "/?Operation=read",
+      "&user=##login##&Flow=Console"
+    ],
+    "DefaultProperty": {
+      "DestinationProperty": {
+        "URI": "log:///var/log/qbroker/QFlow_CONSOLE.log?Operation=fetch",
+        "TimePattern": "yyyy-MM-dd HH:mm:ss,SSS"
+      }
+    },
+    "ResultTemplate": "##body##\n"
+  },{
+    "Name": "flow",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "150",
+    "JMSPropertyGroup": [{
+      "short_name": "^Flow$",
+      "asset": "^[^:]*$"
+    }],
+    "URITemplate": [
+      "tcp://##asset##:6625",
+      "/?Operation=read",
+      "&user=##login##&Flow=##service##"
+    ],
+    "DefaultProperty": {
+      "DestinationProperty": {
+        "URI": "log:///var/log/qbroker/QFlow_##service##.log?Operation=fetch",
+        "TimePattern": "yyyy-MM-dd HH:mm:ss,SSS"
+      }
+    },
+    "ResultTemplate": "##body##\n"
+  },{
+    "Name": "wmq_q",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "300",
+    "JMSPropertyGroup": [{
+      "HostName": "^.+$",
+      "QueueName": "^.+$"
+    }],
+    "URITemplate": [
+      "wmq://##HostName##",
+      ":##port##",
+      "/?QueueName=##QueueName##",
+      "&Operation=get"
+    ],
+    "URISubstitution": [
+      "s/^wmq:\/\/$//",
+      "s/^:$//",
+      "s/^QueueName=$//"
+    ],
+    "ResultTemplate": "##body##\n"
+  },{
+    "Name": "wmq_t",
+    "Capacity": "1024",
+    "XAMode": "1",
+    "MaxIdleTime": "300",
+    "JMSPropertyGroup": [{
+      "HostName": "^.+$",
+      "TopicName": "^.+$"
+    }],
+    "URITemplate": [
+      "wmq://##HostName##",
+      ":##port##",
+      "/?TopicName=##TopicName##",
+      "&Operation=sub"
+    ],
+    "URISubstitution": [
+      "s/^wmq:\/\/$//",
+      "s/^:$//",
+      "s/^TopicName=$//"
+    ],
+    "ResultTemplate": "##body##\n"
+  }],
+  "OutLink": ["ipool", {
+    "Name": "failure",
+    "Capacity": "48",
+    "Partition": "20,4"
+  },{
+    "Name": "nohit",
+    "Capacity": "32",
+    "Partition": "20,4"
+  }]
+}
+</pre>
+</p>
+
+</body>
+</html>

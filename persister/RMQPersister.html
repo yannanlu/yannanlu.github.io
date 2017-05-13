@@ -1,0 +1,74 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> RMQPersister </B> </FONT>
+</CENTER>
+
+<p>
+RMQPersister is a JMS message consumer that listens to an internal XQueue.
+It receives messages from the queue to publishes them with certain routing keys
+to a RabbitMQ exchange as the output. RMQPersister supports all exchange types.
+The only operation, pub, is supported.  It also supports flow control and XA.
+Fault tolerance with auto reconnections is built in.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for RMQPersister.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> ExchangeName </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the exchange </TD> <TD> video </TD>
+</TR>
+<TR>
+<TD> ExchangeType </TD> <TD> string </TD> <TD> optional </TD> <TD> type of the exchange </TD> <TD> fanout (default: direct)</TD>
+</TR>
+<TR>
+<TD> RoutingKey </TD> <TD> string </TD> <TD> optional </TD> <TD> routing keys for binding to the queue </TD> <TD> test </TD>
+</TR>
+<TR>
+<TD> IsPassive </TD> <TD> string </TD> <TD> optional </TD> <TD> check before declaring  </TD> <TD> false (default: true) </TD>
+</TR>
+<TR>
+<TD> IsDurable </TD> <TD> string </TD> <TD> optional </TD> <TD> if durable on creaions </TD> <TD> true (default: false) </TD>
+</TR>
+<TR>
+<TD> AutoDelete </TD> <TD> string </TD> <TD> optional </TD> <TD> if to set auto delete on exchange </TD> <TD> true (default: false) </TD>
+</TR>
+</TABLE>
+where most of the implementation specific properties are for RabbitMQ.
+</p>
+
+<p>
+Here is an example of RMQPersister:
+
+<pre>
+{
+  "Name": "pstr_video",
+  "ClassName": "org.qbroker.persister.RMQPersister",
+  "URI": "amqp://broker1/",
+  "RoutingKey": "video",
+  "Operation": "pub",
+  "Username": "guest",
+  "Password": "xxxx",
+  "ExchangeType": "direct",
+  "IsPassive": "true",
+  "IsDurable": "true",
+  "AutoDelete": "false",
+  "LinkName": "root",
+  "XAMode": "1",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "DisplayMask": "18"
+}
+</pre>
+</p>
+
+</body>
+</html>

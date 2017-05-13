@@ -1,0 +1,164 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JSONPathNode </B> </FONT>
+</CENTER>
+
+<p>
+JSONPathNode parses JSON payload of JMS messages and retrieves data from the
+payload according to the predifined JSONPath expressions.  It then sets them
+into message's properties.  The original JSON payload should be always stored
+in the message body.  JSONPathNode will not modify the JSON payload.  There are
+three outlinks, done for all parsed messages, nohit for those messages not
+belonging to any predefined rulesets, failure for those messages failed in
+the JSONPath evaluations. JSONPath is the path with dot as the delimiter,
+similar with those for dust.js.
+</p>
+<img vspace=10 halign=center src="JSONPathNode.jpg" />
+<p>
+JSONPathNode contains a number of predefined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also defines the JSONPath
+expressions.  The original JSON payload should be always stored in the message
+body.  Due to JMS specifications, you have to clear user properties before
+resetting them on a readonly message.  You can specify ResetOption in a ruleset
+so that the message header will be reset for modifications.  Its value is 0 for
+no reset, 1 for optional reset and 2 for guaranteed reset.
+</p>
+<p>
+JSONPathNode supports dynamic setting of jsonpath expressions.  It means you
+can reference properties of the message in your jsonpath expressions.
+JSONPathNode will retrieve the data from the incoming message and compile the
+expressions before the evaluation.
+</p>
+<p>
+JSONPathNode always adds an extra ruleset for the nohit messages.
+This nohit ruleset is always the first ruleset with the id of 0.
+On the node level, DisplayMask and StringProperty control
+the display result of outgoing messages.
+</p>
+<p>
+You are free to choose any names for the three fixed outlinks.  But JSONPathNode
+always assumes the first outlink for done, the second for failure and the last
+for nohit.
+</p>
+
+<p>
+The JSONPath evaluation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of JSONPathNode.
+Here are complete properties of rulesets for JSONPathNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> ResetOption </TD> <TD> integer </TD> <TD> optional </TD> <TD> option to reset properties </TD> <TD> 2 (default: 0) </TD>
+</TR>
+<TR>
+<TD> JSONPath </TD> <TD> map </TD> <TD> mandatory for JSONPath only </TD> <TD> for resetting properties of messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where JSONPath specifies the details of the JSONPath expressions.
+PreferredOutLink can be defined for bypass rulesets only.  In this case,
+the messages of the group will not be parsed.  Here is an example for
+the bypass ruleset:
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it routes the messages to the outlink of BYPASS.
+</p>
+<p>
+Here is an example of the JSONPath ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "script",
+    "JMSPropertyGroup": [{
+      "operation": "^start$"
+    }],
+    "ResetOption": "1",
+    "JSONPath": {
+      "ActionScript": "StartScript"
+    }
+  }],
+  ...
+}
+</pre>
+where it extracts the content from the JSON payload and sets the value on the
+property of ActionScript.
+</p>
+
+<p>
+Here is an example of JSONPathNode:
+<pre>
+{
+  "Name": "node_jsonpath",
+  "ClassName": "org.qbroker.node.JSONPathNode",
+  "Description": "parse json messages",
+  "Operation": "evaluate",
+  "LinkName": "root",
+  "Capacity": "6",
+  "DisplayMask": "0",
+  "Debug": "19",
+  "Ruleset": [{
+    "Name": "test",
+    "ResetOption": "1",
+    "JMSPropertyGroup": [{
+      "JMSType": "."
+    }],
+    "JSONPath": {
+      "FileName": "store.book[0].path"
+    }
+  }],
+  "OutLink": ["parsed", {
+    "Name": "failure",
+    "Capacity": "24",
+    "Partition": "0,6"
+  },{
+    "Name": "nohit",
+    "Capacity": "24",
+    "Partition": "0,6"
+  }]
+}
+</pre>
+</p>
+
+</body>
+</html>

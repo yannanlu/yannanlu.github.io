@@ -1,0 +1,226 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> XSLTNode </B> </FONT>
+</CENTER>
+
+<p>
+XSLTNode transforms XML payload of JMS messages into various content based
+on the XSL templates, specified by the URI or the ruleset.  There are three
+outlinks, done for the formatted messages, failure for those messages failed
+in the transformation and nohit for those messages not belonging to any
+predefined rulesets.
+</p>
+<img vspace=10 halign=center src="XSLTNode.jpg" />
+<p>
+XSLTNode contains a number of predefined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also defines the transformation
+parameters, a template for the path to the XSL template files and their TTL.
+The template is used to build the full path to the XSL template files.  The xsl
+template file has to be accessible from the filesystem or the supported storage.
+The original XML payload should be always stored in the message body.
+The cache count of templates for the rule will be stored to RULE_PEND. It
+will be updated when the session time exceeds the given SessionTimeout.
+XSLTNode caches every xslt templates dynamically.  You can set the TTL for
+each rule so that its templets will expire and will be removed automatically.
+For parameters, XSLTNode supports dynamic setting of parameters.  It means
+you can reference properties of the message in your parameters.  XSLTNode
+will retrieve the data from incoming message and set the parameters before
+the transformation. Due to JMS specifications, you have to clear user properties
+before resetting them on a readonly message.  You can specify ResetOption in
+a ruleset so that the message header will be reset for modifications.  Its value
+is 0 for no reset, 1 for optional reset and 2 for guaranteed reset.
+</p>
+<p>
+If TargetXPathExpression is defined, the URI will be treated as the path to
+another xml file on the disk. The xml content specified by
+SourceXPathExpression will be merged into the XML payload of the message at
+the position specified by TargetXPathExpression.
+</p>
+<p>
+XSLTNode always adds an extra ruleset for the nohit messages.
+This nohit ruleset is always the first ruleset with the id of 0.
+On the node level, DisplayMask and StringProperty control
+the display result of outgoing messages.
+</p>
+<p>
+You are free to choose any names for the three fixed outlinks.  But XSLTNode
+always assumes the first outlink for done, the second for failure and the last
+for nohit.
+</p>
+
+<p>
+Apart from the common properties, there are three implementation specific
+properties for XSLTNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> SessionTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in sec for a session </TD> <TD> 3600 (default: 0) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+The transformation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of XSLTNode.
+Here are complete properties of rulesets for XSLTNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> URITemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the full path of the template file </TD> <TD> /opt/qbroker/xsl/##TempName##.xsl </TD>
+</TR>
+<TR>
+<TD> URISubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text substitution for the full path of the template file </TD> <TD> s/\.xml$/\.xsl/ </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds to cache the xsl templates </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> ResetOption </TD> <TD> integer </TD> <TD> optional </TD> <TD> option to reset properties </TD> <TD> 2 (default: 0) </TD>
+</TR>
+<TR>
+<TD> XSLParameter </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting xsl parameters from the messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> TargetXPathExpression </TD> <TD> string </TD> <TD> mandatory for merge </TD> <TD> to select the nodeset from the xml payload for merging position </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> SourceXPathExpression </TD> <TD> string </TD> <TD> optional for merge </TD> <TD> to select the nodeset from the source xml for merge </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where XSLParameter specifies the parameters for the transformation.
+PreferredOutLink can be defined for bypass rulesets only.  In this case,
+the messages of the group will not be transformed.  Here is an example for
+the bypass ruleset:
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  },{
+    ...
+  }],
+  ...
+}
+</pre>
+where it routes the messages to the outlink of BYPASS.
+</p>
+
+<p>
+Here is an example of the transform ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "tm",
+    "JMSPropertyGroup": [{
+      "JMSType": "."
+    }],
+    "URITemplate": "/opt/qbroker/xsl/##JMSType##.xsl",
+    "ResetOption": "1",
+    "TimeToLive": "7200",
+    "XSLParameter": {
+      "tc": "##RTC##",
+      "tm": "##Millis##"
+    }
+  },{
+    ...
+  }],
+  ...
+}
+</pre>
+where it expects that the message has defined the template name of the xsl file
+in its JMSType property.  The node will extract the data for the two parameters
+and set them before the transformation.  Upon success, the message body will
+contain the new content formatted from the xsl template.
+</p>
+
+<p>
+Here is an example of the merge ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "merge",
+    "JMSPropertyGroup": [{
+      "FileName": "."
+    }],
+    "URITemplate": "##FileName##",
+    "TargetXPathExpression": "/*/Name",
+    "SourceXPathExpression": "/*/*",
+  },{
+    ...
+  }],
+  ...
+}
+</pre>
+where it expects that the message has defined the full path of the source xml
+file in its property of FileName.  The node will extract the xml content from
+the source xml file and appends them to the xml payload.  Upon success,
+the message body will contain the new xml content merged with the xml source.
+</p>
+
+<p>
+Here is an example of XSLTNode:
+<pre>
+{
+  "Name": "node_xslt",
+  "ClassName": "org.qbroker.node.XSLTNode",
+  "Description": "transform messages",
+  "Operation": "transform",
+  "LinkName": "root",
+  "Capacity": "6",
+  "WaitTime": "50",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "SessioTimeout": "600",
+  "Ruleset": [{
+    "Name": "html",
+    "JMSPropertyGroup": [{
+      "JMSType": "."
+    }],
+    "URITemplate": "/opt/qbroker/xsl/##JMSType##.xsl",
+    "TimeToLive": "3600"
+  }],
+  "OutLink": ["out", "failure", "nohit"]
+}
+</pre>
+</p>
+
+</body>
+</html>

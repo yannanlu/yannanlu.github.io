@@ -1,0 +1,211 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ActionNode </B> </FONT>
+</CENTER>
+
+<p>
+ActionNode processes incoming JMS messages and takes the predefined actions
+according to the rulesets and the content of the incoming messages.  As the
+escalation of actions, ActionNode may generate a new JMS message.  All the
+escalation messages will be routed to the outlink of done.  For all the
+incoming messages, ActionNode routes them into three outlinks: bypass for
+all the processed incoming messages, nohit for those messages do not belong
+to any rulesets, failure for the incoming messages failed in the process.
+</p>
+<img vspace=10 halign=center src="ActionNode.jpg" />
+<p>
+ActionNode contains a number of predefined rulesets.  These rulesets
+categorize incoming messages into non-overlapping groups.  Therefore, each
+rule defines a unique message group.  The ruleset also defines its actions
+and the rules to generate new messages for the group.  Different groups may
+have different actions and/or different parameters.  For an escalation
+message, ActionOrder determines its delivery order relative to the incoming
+message.  ActionOrder takes one of the three values: "none", "first" and
+"last".  By default, it is set to "none" and there is no order defined on
+the newly generated messages.  If it is set to "first", ActionNode will
+send out the new message first and wait for its delivery.  Then it will
+have the incoming message going through the bypass outlink.  If it is set
+to "last", the incoming message will go through the bypass outlink first.
+Upon the completion of its delivery, ActionNode sends the escalation
+message through the outlink of done.
+</p>
+<p>
+The default action of ActionNode is to escalate messages in different message
+types.  For example, if the incoming message is a MapMessage, the escalated
+message can be a TextMessage.  If FormatterArgument is defined, the incoming
+message will be duplicated and then be formatted based on the list of format
+operations.  It is similar to FormatNode, except for that it only formats the
+escalated messages.  It is also similar to DuplicateNode, except for that
+the only copy will be formatted before the escalation.
+</p>
+<p>
+Apart from the user defined rulesets, ActionNode always creates one extra
+ruleset, nohit.  The ruleset of nohit is for those messages not hitting any
+patterns.  Please remember, there is no one-to-one relationship between the
+candidate messages and the escalation messages.  The escalation messages
+will be stored into the RULE_PEND field of the rulesets.  The rule-level
+property displaying and resetting are mutual-exclusively determined by the
+DisplayMask and the StringProperty of their own rulesets.  If DisplayMask
+is not defined in a ruleset or it is set to 0 or -1 (by default), its
+StringProperty will be used to reset the string properties of the escalation
+messages.  Otherwise, its StringProperty will only be used to display the
+details of the escalation messages.  On the node level, DisplayMask and
+StringProperty control the displaying result of all incoming messages.  But
+if the DisplayMask of a ruleset is set to -1, that rule will inherit the
+DisplayMask and the StringProperty from the node for display control on
+the rule level.
+</p>
+<p>
+ActionNode also supports customized actions via plugins. In this case, the
+full ClassName of the plugin and its ActionArgument must be well defined
+in the ruleset.  The developer of the plugin action is supposed to document
+the details of ActionArgument.  ActionNode will load the plugin and invokes
+the action on the messages of the ruleset.
+</p>
+<p>
+You are free to choose any names for the four fixed outlinks.  But ActionNode
+always assumes the first outlink for done, the second for bypass, the third
+for failure and the last for nohit.  Any two or more outlinks can share
+the same outlink name.  It means these outlinks are sharing the same output
+channel.
+</p>
+
+<p>
+The operation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of ActionNode.
+Here are complete properties of rulesets for ActionNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> ActionOrder </TD> <TD> string </TD> <TD> optional </TD> <TD> for action order </TD> <TD> last (default: none) </TD>
+</TR>
+<TR>
+<TD> MessageType </TD> <TD> string </TD> <TD> mandatory for type conversion only </TD> <TD> message type for the escalated messages </TD> <TD> jms_map </TD>
+</TR>
+<TR>
+<TD> FormatterArgument </TD> <TD> object </TD> <TD> optional </TD> <TD> list of format operations for the escalated messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> optional </TD>
+<TD> full classname of the plugin formatter </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> ActionArgument </TD> <TD> object </TD> <TD> optional </TD> <TD> configuration data for action plugin </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages, or logging </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> the mask controls what to log on the processed messages for the ruleset </TD> <TD> 6 (default: 0) </TD>
+</TR>
+</TABLE>
+where FormatterArgument lists the format operations for the escalated
+messages.  PreferredOutLink can be defined for bypass rulesets only.
+In this case, the messages of the group will not be processed.
+Here is an example of the preferred ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it routes the messages to the outlink of BYPASS.
+</p>
+<p>
+Here is an example of the default action ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "toText",
+    "JMSPropertyGroup": [{
+      "BodyType": "^map$"
+    }],
+    "MessageType": "jms_text"
+  }],
+  ...
+}
+</pre>
+where it assumes that the incoming messages of the group are MapMessages. The
+ruleset converts the MapMessage into a TextMessage and escalates it.
+</p>
+
+<p>
+Here is an example of ActionNode:
+
+<pre>
+{
+  "Name": "node_action",
+  "ClassName": "org.qbroker.node.ActionNode",
+  "Description": "react upon messages",
+  "Operation": "escalate",
+  "LinkName": "omn",
+  "Capacity": "32",
+  "DisplayMask": "6",
+  "Debug": "1",
+  "XAMode": "1",
+  "Ruleset": [{
+    "Name": "notice",
+    "ActionOrder": "last",
+    "DisplayMask": "0",
+    "JMSPropertyGroup": [{
+      "JMSTimestamp": "."
+    }],
+    "FormatterArgument": [{
+      "FiledName": "JMSPriority",
+      "DataType": "int",
+      "Template": ["3"]
+    },{
+      "FiledName": "name",
+      "Template": ["MSF"]
+    },{
+      "FiledName": "category",
+      "Template": ["CLUSTER"]
+    }]
+  }],
+  "OutLink": [
+    "escalation",
+    "bypass",
+    "failure",
+    "nohit"
+  ]
+}
+</pre>
+where it duplicates the messages, formats them and escalates them.
+</p>
+
+</body>
+</html>

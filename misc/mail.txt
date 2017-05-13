@@ -1,0 +1,10 @@
+
+This message was automatically generated.
+Problem with ##name## on ##hostname##:
+
+##compact##
+
+If errors persist, please contact the on-call.
+
+A brief information on the monitor and this type of message can be found at
+http://panda/docs/application/agent.html###type##

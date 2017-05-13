@@ -1,0 +1,91 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> RMQReceiver </B> </FONT>
+</CENTER>
+
+<p>
+RMQReceiver is a JMS message producer that listens to a RabbitMQ queue.
+It receives messages from the queue and puts them to an internal XQueue
+as the output. RMQReceiver supports all exchange types.  The only operation,
+get, is supported.  It also supports flow control and XA.  Fault
+tolerance with auto reconnections is built in.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for RMQReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> ExchangeName </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the exchange </TD> <TD> video </TD>
+</TR>
+<TR>
+<TD> ExchangeType </TD> <TD> string </TD> <TD> optional </TD> <TD> type of the exchange </TD> <TD> topic (default: direct)</TD>
+</TR>
+<TR>
+<TD> QueueName </TD> <TD> string </TD> <TD> optional </TD> <TD> queue </TD> <TD> dam_in </TD>
+</TR>
+<TR>
+<TD> RoutingKey </TD> <TD> string or list </TD> <TD> optional </TD> <TD> routing keys for binding to the queue </TD> <TD> test </TD>
+</TR>
+<TR>
+<TD> IsPassive </TD> <TD> string </TD> <TD> optional </TD> <TD> check before declaring  </TD> <TD> false (default: true) </TD>
+</TR>
+<TR>
+<TD> IsDurable </TD> <TD> string </TD> <TD> optional </TD> <TD> if durable on creaions </TD> <TD> true (default: false) </TD>
+</TR>
+<TR>
+<TD> AutoDelete </TD> <TD> string </TD> <TD> optional </TD> <TD> if to set auto delete on exchange or queue </TD> <TD> true (default: false) </TD>
+</TR>
+<TR>
+<TD> Priority </TD> <TD> integer of 0-9 </TD> <TD> optional </TD> <TD> new priority to set on messages </TD> <TD> 5 (default: no change) </TD>
+</TR>
+<TR>
+<TD> Persistence </TD> <TD> integer of 1,2 </TD> <TD> optional </TD> <TD> new persistence to set on messages </TD> <TD> 2 (default: no change) </TD>
+</TR>
+<TR>
+<TD> Expiry </TD> <TD> integer </TD> <TD> optional </TD> <TD> milliseconds to add to message's expiration time </TD> <TD> 60000 (default: no change) </TD>
+</TR>
+</TABLE>
+where most of the implementation specific properties are for RabbitMQ.
+</p>
+
+<p>
+Here is an example of RMQReceiver:
+
+<pre>
+{
+  "Name": "rcvr_rmq",
+  "ClassName": "org.qbroker.receiver.RMQReceiver",
+  "URI": "amqp://broker1/",
+  "QueueName": "QB_IN",
+  "Operation": "get",
+  "Username": "guest",
+  "Password": "xxxx",
+  "ExchangeType": "direct",
+  "IsPassive": "true",
+  "IsDurable": "true",
+  "AutoDelete": "false",
+  "LinkName": "root",
+  "Mode": "daemon",
+  "XAMode": "1",
+  "TextMode": "1",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "DisplayMask": "18",
+  "StringProperty": {
+    "Hostname": "broker1",
+  }
+}
+</pre>
+</p>
+
+</body>
+</html>

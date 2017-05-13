@@ -1,0 +1,11 @@
+{
+  "Name": "Sub",
+  "ClassName": "org.qbroker.monitor.ConfigList",
+  "Site": "SPORT",
+  "Type": "ConfigList",
+  "Category": "EVENT",
+  "Discription": "It lists all subscripions for DEV",
+  "Subscription": ["mail_dev"],
+  "Correlation": ["all_sidev"],
+  "Escalation": ["for_sidev"]
+}

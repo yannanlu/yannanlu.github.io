@@ -1,0 +1,66 @@
+{
+  "Name": "Agent",
+  "Site": "DEVOPS",
+  "Type": "Monitor",
+  "Category": "Agent",
+  "HomeDir": "/opt/qbroker",
+  "LogDir": "/var/log/qbroker",
+  "LogDatePattern": "'.'MM",
+  "StatsURL": "http://panda:8082/stats",
+  "CompletedFile": "/var/log/qbroker/completed",
+  "MaxNumberThread": "3",
+  "Heartbeat": "300",
+  "MaxRetry": "3",
+  "Timeout": "600",
+  "Debug": "1",
+  "ConfigRepository": "repository_agent",
+  "AdminServer": {
+    "ClassName": "org.qbroker.receiver.ServerReceiver",
+    "URI": "tcp://localhost:6627",
+    "Operation": "respond",
+    "Capacity": "64",
+    "Partition": "0,32",
+    "EOTBytes": "0x0a",
+    "TextMode": "1",
+    "Template": "##body##\n",
+    "Parser": {
+      "ClassName": "org.qbroker.event.EventParser"
+    },
+    "RestartScript": "/bin/bash -c \"/opt/qbroker/bin/agentctl restart &\""
+  },
+  "MonitorGroup": [
+    {
+      "Name": "default",
+      "Monitor": [
+        "rpt_panda1",
+        "rpt_panda2",
+        "global_var",
+        "rotation_agent_out",
+        "rotation_agent_stats"
+      ] // end of monitor
+    },{
+      "Name": "jlog",
+      "Heartbeat": "120",
+      "Monitor": [
+        "event_jlog",
+        "stats_jlog"
+      ] // end of monitor
+    }
+  ], // end of MonitorGroup
+  "MessageFlow": [{
+    "Name": "default",
+    "Description": "dispatch events for Agent",
+    "Capacity": "1024",
+    "XAMode": "0",
+    "Debug": "1",
+    "PauseTime": "2",
+    "StandbyTime": "60",
+    "Node": [
+      "node_switch"
+    ],
+    "Persister": [
+      "pstr_event",
+      "pstr_nohit"
+    ]
+  }] // end of MessageFlow
+}

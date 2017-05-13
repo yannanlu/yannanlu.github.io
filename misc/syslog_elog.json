@@ -1,0 +1,39 @@
+{
+  "Name": "syslog_elog",
+  "ClassName": "org.qbroker.monitor.ExpectedLog",
+  "Site": "DEVOPS",
+  "Type": "ExpectedLog",
+  "Category": "SYSLOG",
+  "Description": "health-check for syslog",
+  "Step": "1",
+  "Tolerance": "0",
+  "MaxRetry": "1",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "TestScript": {
+    "Option": [{
+      "rpt_sunos": "/usr/bin/logger -p local7.info SYSLOG_Agent: this is a test"
+    },{
+      "rpt_redhat": "/usr/bin/logger -p local7.info SYSLOG_Agent: this is a test"
+    },{
+      "rpt_suse": "/bin/logger -p local7.info SYSLOG_Agent: this is a test"
+    },{
+      "default": "/usr/bin/logger -p local7.info SYSLOG_Agent: this is a test"
+    }]
+  },
+  "ScriptTimeout": "10",
+  "SleepTimeout": "10",
+  "URI": "log:///var/log/agent.log",
+  "ReferenceFile": "/var/log/qbroker/.status/syslog.log",
+  "TimePattern": "MMM d HH:mm:ss",
+  "PatternGroup": [{
+    "Pattern": ["SYSLOG_OM: this"]
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00",
+      "Threshold": "15:00,20:00"
+    }]
+  }
+}

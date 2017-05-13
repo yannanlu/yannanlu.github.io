@@ -1,0 +1,29 @@
+{
+  "Name": "Flow",
+  "ClassName": "org.qbroker.flow.QFlow",
+  "Site": "DEVOPS",
+  "Type": "QFlow",
+  "Category": "FCN",
+  "Operation": "move",
+  "XAMode": "0",
+  "Capacity": "256",
+  "Mode": "daemon",
+  "Debug": "49",
+  "LogDir": "/var/log/qbroker",
+  "LogDatePattern": "'.'ww",
+  "ConfigDir": "/opt/qbroker/flow/FCN",
+  "Heartbeat": "60",
+  "EscalationCapacity": "64",
+  "MaxNumberFlow": "1",
+  "Receiver": [
+    "rcvr_n1",
+    "rcvr_n2"
+  ],
+  "Node": [
+    "node_format"
+  ],
+  "Persister": [
+    "pstr_log",
+    "pstr_nohit"
+  ]
+}

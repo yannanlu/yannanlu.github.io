@@ -1,0 +1,73 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> StreamReceiver </B> </FONT>
+</CENTER>
+
+<p>
+StreamReceiver is a JMS message producer that listens to an InputStream and
+reads the bytes out of the stream, parses them into a message and puts the
+message to the output XQueue.  StreamReceiver supports flow control and allows
+object control from its owner.  It is fault tolerant with retry and idle
+options.
+</p>
+<p>
+StreamReceiver supports various types of stream based data sources, in terms of
+the scheme such as tcp, comm and file.  The operations of read and respond are
+supported.  For example, it can be used to receive messages from a serial port.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for StreamReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> SOTBytes </TD> <TD> string </TD> <TD> optional </TD> <TD> hex string for start of transmition  </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> EOTBytes </TD> <TD> string </TD> <TD> optional </TD> <TD> hex string for end of transmition  </TD> <TD> 0x0a </TD>
+</TR>
+<TR>
+<TD> Offhead </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of chars to be trimed off at the start </TD> <TD> 0 </TD>
+</TR>
+<TR>
+<TD> Offtail </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of chars to be trimed off at the end </TD> <TD> 1 </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of StreamReceiver:
+
+<pre>
+{
+  "Name": "rcvr_serial",
+  "ClassName": "org.qbroker.receiver.StreamReceiver",
+  "URI": "comm:///dev/term/a",
+  "Device": "/dev/term/a",
+  "LinkName": "root",
+  "Operation": "read",
+  "XAMode": "0",
+  "TextMode": "1",
+  "Mode": "daemon",
+  "BufferSize": "4096",
+  "SOTBytes": "0x01",
+  "EOTBytes": "0x04",
+  "BaudRate": "9600",
+  "DataBits": "8",
+  "StopBits": "1",
+  "Parity": "None",
+  "DisplayMask": "4"
+}
+</pre>
+where it reads the byte off the serial port of /dev/term/a.
+</p>
+
+</body>
+</html>

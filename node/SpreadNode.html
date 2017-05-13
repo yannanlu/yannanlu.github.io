@@ -1,0 +1,194 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> SpreadNode </B> </FONT>
+</CENTER>
+
+<p>
+SpreadNode is a message node that process stats data carried by the messages.
+SpreadNode retrieves data from JMS messages and spreads them according to the
+predefined rulesets.  It filters them into three outlinks: bypass for all the
+spread messages, nohit for those messages do not belong to any predefined
+rulesets, failure for the messages failed at the spread operations.  SpreadNode
+will create a set of new messages as the result of the spread operations for
+each spread message.  These new messages go to the outlink of done.  Also all
+the new messages will be in TextMessage.  Any incoming messages will go out
+via one of the three other outlinks.
+</p>
+<img vspace=10 halign=center src="SpreadNode.jpg" />
+<p>
+SpreadNode contains a number of predefined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each ruleset
+defines a unique message group.  Ruleset also defines the MaxDuration and the
+Interval for spread operations.  Each group maintains its own data cache and
+the state. If any data set expires, SpreadNode will create a new TextMessage
+loaded with the data.  The new messages will be flushed out.  The flushed
+messages can be displayed via node based DisplayMask and StringProperty.
+The number of the data points in cache is tracked by RULE_PEND field.
+SpreadNode always creates an extra ruleset, nohit, for all messages not
+hitting any patterns.
+</p>
+<p>
+SpreadNode also supports checkpointing of the internal data cache.  In order
+to do checkpointing, the CheckpointDir and SAXParser must be defined.
+</p>
+<p>
+You are free to choose any names for the four fixed outlinks.  But
+SpreadNode always assumes the first outlink for done, the second for bypass,
+the third for failure and the last for nohit.  Any two or more outlinks can
+share the same outlink name.  It means these outlinks are sharing the same
+output channel.
+</p>
+<p>
+Apart from the common properties, there are some implementation specific
+properties for SpreadNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in second for a session </TD> <TD> 300 (default: 3600) </TD>
+</TR>
+<TR>
+<TD> CheckpointDir </TD> <TD> string </TD> <TD> optional </TD> <TD> max number of cached groups </TD> <TD> 1024 (default: 1024) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+The spread operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of SpreadNode.
+Here are complete properties of rulesets for SpreadNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> MaxDuration </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds to expire the cache items </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> Interval </TD> <TD> string </TD> <TD> optional </TD> <TD> type of the requests </TD> <TD> jdbc </TD>
+</TR>
+<TR>
+<TD> Scale </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the target ruleset </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> TimeTemplate </TD> <TD> string </TD> <TD> mandatory </TD> <TD> template for the timestamp </TD> <TD> ##Count## </TD>
+</TR>
+<TR>
+<TD> TimePattern </TD> <TD> string </TD> <TD> optional </TD> <TD> pattern for the timestamp </TD> <TD> ##Count## </TD>
+</TR>
+<TR>
+<TD> SpreadData </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the cache key </TD> <TD> ##Count## </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory only for bypass </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for logging of message properties </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> DispalyMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> mask to display new messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "done",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it sends the messages to the outlink of done without processing them.
+</p>
+
+<p>
+Here is an example of SpreadNode:
+<pre>
+{
+  "Name": "node_spread",
+  "ClassName": "org.qbroker.node.SpreadNode",
+  "Description": "spread messages",
+  "Operation": "spread",
+  "LinkName": "spread",
+  "Capacity": "128",
+  "DisplayMask": "2",
+  "Debug": "1",
+  "Heartbeat": "30",
+  "CheckpointDir": "/var/log/qbroker/checkpoint/STATS",
+  "StringProperty": {
+    "type": "",
+    "hostname": "",
+    "LogTime": ""
+  },
+  "Ruleset": [{
+    "Name": "tape",
+    "JMSPropertyGroup": [{
+      "type": "^tsm_trace$"
+    }],
+    "MaxDuration": "3600",
+    "Interval": "60",
+    "Scale": "1000",
+    "TimeTemplate": "##LogTime## 2010",
+    "TimePattern": "MMM d HH:mm:ss yyyy",
+    "SpreadData": [{
+      "DataField": "RBytes",
+      "DurationField": "RTime",
+      "CountField": "RCount"
+    },{
+      "DataField": "WBytes",
+      "DurationField": "WTime",
+      "CountField": "WCount"
+    }],
+    "StringProperty": {
+      "type": ""
+    }
+  }],
+  "OutLink": [{
+    "Name": "merged",
+    "Capacity": "256",
+    "partition": "0,64"
+  },{
+    "Name": "null",
+    "Capacity": "128",
+    "Partition": "0,64"
+  },{
+    "Name": "failure",
+    "Capacity": "256",
+    "Partition": "128,16"
+  },{
+    "Name": "nohit",
+    "Capacity": "256",
+    "Partition": "128,16"
+  }]
+}
+</pre>
+</p>
+
+</body>
+</html>

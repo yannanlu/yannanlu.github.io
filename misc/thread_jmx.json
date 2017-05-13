@@ -1,0 +1,30 @@
+{
+  "Name": "thread_jmx",
+  "ClassName": "org.qbroker.monitor.NumberMonitor",
+  "Site": "DEVOPS",
+  "Type": "NumberMonitor",
+  "Category": "JMX",
+  "Description": "JMX monitor on thread count",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "30",
+  "ExceptionTolerance": "-1",
+  "URI": "service:jmx:rmi:///jndi/rmi://localhost:1762/jmxrmi",
+  "Username": "sonicmq",
+  "Password": "QZ?P01",
+  "MBeanName": "java.lang:type=Threading",
+  "AttributeName": "ThreadCount",
+  "Pattern": "(\\d+)",
+  "Operation" : "max",
+  "WarningRange": ["(650,)"],
+  "ErrorRange": ["(700,)"],
+  "CriticalRange": ["(800,)"],
+  "StatsLog": "/var/log/qbroker/stats/jmx.thd",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

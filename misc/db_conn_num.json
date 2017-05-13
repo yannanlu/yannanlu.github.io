@@ -1,0 +1,29 @@
+{
+  "Name": "db_conn_num",
+  "ClassName": "org.qbroker.monitor.NumberMonitor",
+  "Site": "DEVOPS",
+  "Type": "NumberMonitor",
+  "Category": "DAM",
+  "Description": "monitor the number of DB connections",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "1",
+  "MaxPage": "0",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "-1",
+  "URI": "script:///bin/netstat",
+  "Script": "/bin/netstat -nat",
+  "Timeout": "60",
+  "PatternGroup": [{
+    "Pattern": ["\s+ESTABLISHED"]
+  }],
+  "Pattern": ":1530\s+ESTABLISHED",
+  "Operation": "count",
+  "StatsLog": "/var/log/qbroker/stats/db_conn.log",
+  "ErrorRange": ["[15,)"],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

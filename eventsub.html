@@ -1,0 +1,521 @@
+<html>
+<head>
+<title>EventSubscription</title>
+</head>
+<CENTER>
+<FONT SIZE=5>
+<B>
+EventSubscription and its Configurations 
+</B>
+</FONT>
+</CENTER>
+<p>
+EventFlow is a centralized Event pub/sub service. The end users can subscribe
+events based on their interests on the event content. Once there is an
+incoming event htting a subscription, EventFlow will invoke the actions
+associated with the subscription and delivers the event to the customers
+in thier customized format.
+</p>
+<p>
+EventSubscription is an object of ConfigList that represents a list of
+configurations of three types of rulesets, Subscriptions for EventDispatcher,
+Correlations for EventCorrlator and Escalations for EventMonitor. It has the
+short name of <b>Sub</b>. On WebAdmin, Sub may have multiple services.
+Each of the service will have one PropertyMonitor as the hook in the workflow
+of EventFlow. For example, devteam is a service of <b>Sub</b>. It is
+corresponding to the ruleset of the same name in node_dispatcher. Each service
+has its own master configuration file, <b>Sub.json</b>, which lists all the
+names of the items. The detail of an item is defined in a separate file.
+Here is an example of the master configuration file, <b>Sub.json</b>:
+</p>
+<pre>
+{
+  "Name": "Sub",
+  "ClassName": "org.qbroker.monitor.ConfigList",
+  "Site": "SPORT",
+  "Type": "ConfigList",
+  "Category": "EVENT",
+  "Discription": "It lists all subscripions for DEV",
+  "Subscription": ["mail_dev"],
+  "Correlation": ["all_dev"],
+  "Escalation": ["for_dev"]
+}
+</pre>
+<p>
+This example lists 3 rulesets. The first one is mail_dev, a subscription,
+which will be added to node_dispatcher. The second one is all_dev,
+a correlation, which will be added to node_correlation. The third is for_dev,
+an escalation, which will be added to node_monitor. As the end users, you can
+add new subcriptions, remove the old ones or modify the existing ones.
+Once the change is made, just make sure to publish all the changes first.
+Then publish the master configuration file also, no matter if it has been
+changed or not. 
+</p>
+
+<p>
+Here is the list of the topics:
+</p>
+<UL>
+<LI> <a HREF="#Event"> Event </a></LI>
+<LI> <a HREF="#Template"> Template </a></LI>
+<LI> <a HREF="#Subscription"> Subscription </a></LI>
+<LI> <a HREF="#Correlation"> Correlation </a></LI>
+<LI> <a HREF="#Escalation"> Escalation </a></LI>
+</UL>
+
+<a NAME="Event"></a>
+<H3> Event </H3>
+<p>
+In order to understand EventFlow's Pub/Sub services, you need to get
+familiar with Event.  An Event is a self-described structure message,
+similar to a JSON message.  It has some mandatory properties or attributes,
+such as priority, name, site, type, text, etc.  It also has other free-formed
+properties.  All the properties are of Java String type.  The applications use
+Event to exchange information and data.  The benefit of Event is to allow
+applications on different platforms to easily parse, match, evaluate, correlate
+and process the messages.
+</p>
+
+<p>
+Here lists the mandatory properties of an Event:
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> priority </TD> <TD> mandatory </TD> <TD> priority of Event </TD> <TD> INFO, WARNING, NOTICE, ERR and CRIT </TD>
+</TR>
+<TR>
+<TD> name </TD> <TD> mandatory </TD> <TD> name of Event </TD> <TD> 'qmgr_proc' </TD>
+</TR>
+<TR>
+<TD> site </TD> <TD> mandatory </TD> <TD> site that Event related to </TD> <TD>  'DEVOPS' </TD>
+</TR>
+<TR>
+<TD> category </TD> <TD> mandatory </TD> <TD> category of Event </TD> <TD> 'WMQ' or 'CMS' </TD>
+</TR>
+<TR>
+<TD> type </TD> <TD> mandatory </TD> <TD> type of Event </TD> <TD> 'ProcessMonitor' </TD>
+</TR>
+<TR>
+<TD> text </TD> <TD> mandatory </TD> <TD> message of Event </TD> <TD> 'I am OK' </TD>
+</TR>
+<TR>
+<TD> hostname </TD> <TD> mandatory </TD> <TD> hostname where the event is from </TD> <TD> panda </TD>
+</TR>
+<TR>
+<TD> program </TD> <TD> mandatory </TD> <TD> application name that sends Event </TD> <TD> 'MonitorAgent' </TD>
+</TR>
+<TR>
+<TD> pid </TD> <TD> mandatory </TD> <TD> Unix process ID </TD> <TD> 154 </TD>
+</TR>
+<TR>
+<TD> tid </TD> <TD> optional </TD> <TD> thread ID </TD> <TD> 1 </TD>
+</TR>
+<TR>
+<TD> owner </TD> <TD> mandatory </TD> <TD> owner of application </TD> <TD> 'httpd' </TD>
+</TR>
+<TR>
+<TD> date </TD> <TD> mandatory </TD> <TD> Unix timestamp in millisecond </TD> <TD> 109871231000 </TD>
+</TR>
+</TABLE>
+
+<p>
+Since Event has multiple properties, the applications can put anything inside
+an Event.  With EventFlow, customers can subscribe those events
+that match to certain patterns.  EventFlow supports most of Perl5
+regular expressions.  All the properties of Event are allowed to be evaluated
+against regular expressions.  For example, a user can subscribe all events
+from the machine of <TT>panda</TT>.  You just need to create an EventPattern
+with only one match entry on the hostname property of Event.  If the same user
+is interested in the CRIT events of category <TT>WMQ</TT> only after the work.
+You just need to add two entries on category and priority to the rule, and
+specify the active timewindow for the subscription. As long as the subscription
+is well defined, EventFlow will deliver the events to the user in a 
+customized format. Therefore, EventFlow is a broker that dispatches
+events to their subscribers.
+</p>
+<p>
+Here is the example of EventPattern and active timewindows we have just
+mentioned above:
+<pre>
+{
+  ...
+  "EventPattern": [{
+    "priority": "^CRIT$",
+    "hostname": "^panda$",
+    "category": "^WMQ$"
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "17:00:00-09:00:00"
+    }]
+  }
+}
+</pre>
+As you can see, everything in EventPattern is a Perl5 pattern.
+<p>
+The most important thing is to know what properties are available for
+certain types of events and their meanings.  The developers are supposed to
+document the data schema on each types of events.  If there is no such
+documentation, you still are able to figure them out by simply subscribing 
+the events with a universal match rule. Once an event is delivered to you,
+you will be able to see all its properties.
+</p>
+
+<a NAME="Template"></a>
+<H3> Template </H3>
+<p>
+Template is used to present the content of structure data.  In order to
+transform an Event into various text content, EventFlow uses a very
+simple implementation, just to search and replace each of the referenced
+properties from the event on a given template. The template can be loaded from
+a template file or defined inline. If you are sure about an existing template
+file, it will be very easy to use by just specifying the path to the file.
+<p>
+A template file is a plain text file with bunch of property names to
+reference the values of the properties.  They are stored in the directory
+of <TT>/opt/qbroker/templates</TT> on the host running the EventFlow.  Here is
+an example of a template file:
+<PRE>
+
+This message was automatically generated.
+Problem with ##name## on ##hostname##:
+
+##all##
+
+If errors persist, please contact the on-call.
+
+A brief information on the monitor and this type of message can be found at
+http://panda/docs/application/agent.html###type##
+</PRE>
+where <TT>##hostname##</TT> is a variable in reference of the <TT>hostname</TT>
+property.  Once this template is rendered with an Event, the content
+stored in the hostname property will replace the variable.  <TT>##all##</TT>
+is a special variable that will be replaced by a formatted content from all
+the properties.
+</p>
+<p>
+In case the customer's pager does not accept a big text, you can have this
+simple template to include only a few properties of Event:
+</p>
+<PRE>
+Error on ##hotsname##: ##text##
+</PRE>
+
+<p>
+Template can also be defined explicitly in the configurations. Inline template 
+is very easy, too. It allows the end users to define their own templates
+without any dependencies. Some users have complained a lot about missing
+template files that caused lost of subscriptions. Unfortunately, there is no
+published list for all available template files. Moreover, there is no way for
+end users to introduce a new template file or update an existing template file
+on the hosting server. Before the permanent solutions, the workaround is to
+define the inline template explicitly. With an inline template, there is
+no worries about the existence of the template files.
+</p>
+<p>
+It is easy to convert the content of an existing template file into an inline
+template. You just need to remember to convert every newline char into "\n" and
+escape every double quote with a backward slash, "\". Here is an example with
+both inline Template and TemplateFile:
+</p>
+<pre>
+{
+    ...
+    "ProcessMonitor": {
+      "Subject": "##priority##: Sport process ##name## died on ##hostname##",
+      "TemplateFile": "/opt/event/templates/mail_proc.txt"
+    },
+    "Default": {
+      "Subject": "##hostname##: ##priority## problem with ##name##",
+      "Template": "\nThis message was automatically generated.\nProblem with ##name## on ##hostname##:\n\n##compact##\nIf errors persist, please contact the on-call.\n\nA brief information on the monitor and this type of message can be found at http://panda/docs/application/agent.html###type##\n",
+    },
+    ...
+}
+</pre>
+
+<a NAME="Subscription"></a>
+<H3> Subscription </H3>
+<p>
+Subscription is a ruleset used by EventDispatcher, a MessageNode. It specifies
+what events are subscribed and by who and when. It also contains a group of
+actions for EventDispatcher to react on the event. EventDispatcher node
+uses EventPattern to select events for each customers. Once it finds an
+incoming event matching the EventPattern, it will send that event and its
+actions to the interlinked EventPersister. The most common actions is to
+send an email alert.
+</p>
+<p>
+You can have as many Subscriptions as you want.  Each Subscription has its own
+configuration file named after its name plus ".json" extension. The name of
+Subscription should be unique in the scope of EventFlow. Here is an example of
+subscription for developers:
+</p>
+<pre>
+{
+  "Name": "mail_dev",
+  "Classname": "org.qbroker.event.EventActionGroup",
+  "Type": "EventActionGroup",
+  "Site": "SPORT",
+  "Category": "MAIL",
+  "Description": "mail alert to DEV",
+  "EventPattern": [{
+    "priority": "^(ERR|CRIT)$",
+    "site": "^SPORT$",
+    "hostname": "^(subscriber[1-5]|feeder[ab]|persist[12]|wrigley|goodtimes)$",
+    "category": "^(JMS|XCAST|STORY|APS|GPMS|SCORECAST|ST|STATS|SCORES|FEEDS)$",
+    "type": "^(JMSMonitor|QueueMonitor|UnixlogMonitor|ProcessMonitor|ExpectedLog)$"
+  },{
+    "priority": "^(ERR|CRIT)$",
+    "site": "^SPORT$",
+    "hostname": "^(subscriber[1-5]|feeder[ab]|persist[12])$",
+    "category": "^WMQ$",
+    "type": "^ChannelMonitor$",
+    "text": " apps "
+  },{
+    "priority": "^(ERR|CRIT)$",
+    "site": "^SPORT$",
+    "hostname": "^goodtimes$",
+    "category": "^SCORES$",
+    "type": "^ExpectedLog$"
+  }],
+  "XEventPattern": [{
+    "status": "^[eE]xception$"
+  }],
+  "ActionGroup": [{
+    "URI": "smtp://mail.qbroker.org/",
+    "Email": ["dev@qbroker.org"],
+    "ProcessMonitor": {
+      "Subject": "##priority##: Sport process ##name## died on ##hostname##",
+      "TemplateFile": "/opt/qbroker/templates/mail_proc.txt"
+    },
+    "JMSMonitor": {
+      "Subject": "##priority##: problems with ##name## on ##hostname##",
+      "TemplateFile": "/opt/qbroker/templates/mail_jms.txt"
+    },
+    "QueueMonitor": {
+      "Subject": "##priority##: Queue problem with ##name## on ##hostname##",
+      "TemplateFile": "/opt/qbroker/templates/mail_queue.txt"
+    },
+    "ChannelMonitor": {
+      "Subject": "##priority##: Channel problem with ##name## on ##hostname##",
+      "TemplateFile": "/opt/qbroker/templates/mail_channel.txt"
+    },
+    "UnixlogMonitor": {
+      "Subject": "##priority##: found errors in ##name## on ##hostname##",
+      "TemplateFile": "/opt/qbroker/templates/mail_log.txt"
+    },
+    "ExpectedLog": {
+      "Subject": "##hostname##:##priority##: specific log in ##name## seems late",
+      "TemplateFile": "/opt/qbroker/templates/mail_elog.txt"
+    },
+    "MultiFileMonitor": {
+      "Subject": "##priority##: ##name## seems not updating",
+      "TemplateFile": "/opt/qbroker/templates/mail_file.txt"
+    },
+    "FileMonitor": {
+      "Subject": "##priority##: ##name## seems not updating",
+      "TemplateFile": "/opt/qbroker/templates/mail_file.txt"
+    },
+    "Default": {
+      "Subject": "##hostname##: ##priority## problem with ##name##",
+      "TemplateFile": "/opt/qbroker/templates/mail.txt",
+    }
+  },{
+    "URI": "log:///var/log/qbroker/stats/mail_dev.log",
+    "Summary": "##date## ##priority## ##name## ##hostname## ##text##",
+    "TemplateFile": "/opt/qbroker/templates/append.txt"
+  },{
+    "URI": "syslog://localhost",
+    "Facility": "USER",
+    "Message": "DEV: ##priority## ##hostname## ##category## ##name## ##text##",
+    "UnixlogMonitor": {
+      "Message": "DEV: ##priority## ##hostname## ##category## ##name## ##lastEntry##",
+      "Substitution": [{
+        "lastEntry": "s/^.*ERROR -//"
+      }]
+    }
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}
+</pre>
+
+<p>
+As you can see, this subscription only gets the events with priority of
+ERR or CRIT, from one of the machines of subscriber2, subscriber3, persist2,
+feedera and feederb, but excluding the events with the name contains NFL, etc. 
+The email content will be in the format defined in the template file of
+<TT>/opt/qbroker/templates/mail_dev.txt</TT>.  If EventDispatcher finds a match,
+the event will be send to <TT>dev@qbroker.org</TT>.
+</p>
+<p>
+Please pay attention to the last <B>ActionGroup</B>.  It is used to send
+alert to Netcool via syslog.  Since Netcool can not take structural messages,
+we have to build a single line with the <B>lastEntry</B> at the end of it.
+We have used Perl5 substitution to cut off the timestamp and something else
+on the property of <B>lastEntry</B>.  This is an example of modifying
+content of the event.
+</p>
+<p>
+The good thing for Pub/Sub model is that the publishers and subscribers are
+fully separated.  The subscriber only needs to know what kind of events
+are interested.  The publisher dose not need to worry about who gets what.
+</p>
+<p>
+This json file just defines the Subscription.  You still need to add its name
+to the master configuration file, <b>Sub.json</b>, as one of the Subscriptions:
+</p>
+<pre>
+{
+  ...
+  "Subscription": [
+    "mail_dev"
+  ],
+  ...
+}
+</pre>
+</p>
+
+<a NAME="Correlation"></a>
+<H3> Correlation </H3>
+<p>
+Correlation is a ruleset used by EventCorrelator node to group or partition
+incoming events for event correlations.  Sometimes, EventFlow gets a big
+spike of events and customers get hundreds of alerts due to some kind of
+large-scale outages.  Those events are just symptoms.  There may be just
+a few root causes behind them.  With EventCorrelator node, EventFlow
+will be able to aggregate those events and create a few new events reflecting
+the root causes.  The customers can subscribe the newly created events and
+get more accurate alerts.  Currently, this feature is still in experiment.
+It is mainly used to merge multiple related events into a single event to
+reduce the volume of the alerts.
+</p>
+<p>
+You can have as many correlations as you want.  Each correlation can has its own
+configuration file named after its name plus ".json" extension. The name of
+every correlation should be unique in the scope of EventFlow.  Here is an
+example of correlations set up to merge all events on NFS services:  
+</p>
+<pre>
+{
+  "Name": "all_jcms_nfs",
+  "Classname": "org.qbroker.event.EventSummary",
+  "Type": "MessageSummary",
+  "Site": "DEVOPS",
+  "Category": "NFS",
+  "Description": "event correlation on all JCMS NFS disks",
+  "MinimumEventCount": "2",
+  "EventExpiration": "900",
+  "EventPattern": [{
+    "priority": "^(ERR|CRIT)$",
+    "hostname": "^jcmsprod\\d+$",
+    "name": "_nfs$",
+    "type": "^ScriptLauncher$"
+  }],
+  "XEventPattern": [{
+    "status": "^[eE]xception$"
+  }],
+  "Summary": ["date", "priority", "name", "status", "hostname", "text"]
+}
+</pre>
+<p>
+The json file just defines the correlation. You still need to add the following
+to the master configuration file, <b>Sub.json</b>, as one of the Correlations:
+</p>
+<pre>
+{
+  ...
+  "Correlation": [
+    "all_jcms_nfs"
+  ],
+  ...
+}
+</pre>
+
+<p>
+Even though Correlation also has the EventPattern and similar actions like
+a Subscription, it is not designed to work on individual events.  Its job
+is to select the related events out of the incoming events and aggregate
+upon all of them.  It then publishes a new event as the result of the action.
+</p>
+
+<a NAME="Escalation"></a>
+<H3> Escalation </H3>
+<p>
+Escalation is a ruleset used by EventMonitor node to monitor and react on
+incoming events for event escalations. Sometimes, end users are interested
+in temporal behaviors of certain events. As you know, individual events are
+sessionless. If there is a way to maintain sessions on certain events, it
+will be helpful. One of the use cases of Escalation is to establish
+sessions and manage them on events.
+</p>
+<p>
+Most of the modern monitors send only one alert for a well defined failure.
+There is no follow-ups nor reminders even if the failure still persists.
+If the users have missed this alert, there may be a big concequence. Most
+of the customers ask for the reminding or escalating feature. So that if
+the problem has not been closed or acknowledged within certain time, their
+managers or oncalls should get an escalated notification. With Escalation,
+it is seay to set up a ruleset for this kind of purpose.  Here is an example
+of Escalation with the session support:
+</p>
+<pre>
+{
+  "Name": "newrelic",
+  "EventPattern": [
+    {
+      "priority": "^(ERR|INFO)$",
+      "site": "^NEWRELIC$"
+    }
+  ],
+  "KeyTemplate": "##category##:##hostname##:##name##",
+  "ResetPriority": "INFO",
+  "EscalationPriority": "CRIT",
+  "TimeToLive": "1800",
+  "DisplayMask": "0",
+  "EscalationMask": "6",
+  "Template": "##category##:##hostname##:##name## that ##event## has not been cleared within 30 min",
+  "CopiedProperty": [
+    "name",
+    "category",
+    "site",
+    "type",
+    "policy_name",
+    "condition_name",
+    "incident_id",
+    "severity",
+    "hostname",
+    "status",
+    "url",
+    "details"
+  ]
+}
+</pre>
+where this ruleset tries to create sessions on ERR events from NEWRELIC
+based on the value of KeyTemplate. Each session will be terminated by INFO
+events with the same key. Otherwise it will expire in 30 min and generates
+an escalation event with priority of CRIT. This escalated event can trigger
+a paging alert as a reminder. The chance to miss both the orginal notification
+and the escalation is really rare.
+
+<p>
+The json file just defines the escalation. You still need to add the following
+to the master configuration file, <b>Sub.json</b>, as one of the Escalations:
+</p>
+<pre>
+{
+  ...
+  "Escalation": [
+    "newrelic"
+  ],
+  ...
+}
+</pre>
+
+</body>
+</html>

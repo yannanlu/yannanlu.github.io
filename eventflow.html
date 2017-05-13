@@ -1,0 +1,674 @@
+<html>
+<head>
+<title>EventFlow</title>
+</head>
+<CENTER>
+<FONT SIZE=5>
+<B>
+EventFlow and its Configurations 
+</B>
+</FONT>
+</CENTER>
+<p>
+EventFlow is a centralized Event broker that supports Event Pub/Sub
+services and Event correlations. It periodically fetches the new events
+from EventCollector, a centralized Event logging system running inside a web
+server of Nginx. Any applications, including MonitorAgent, can send or publish
+events to the service of EventCollector via REST requests.  EventFlow picks
+them up and processes the events in their original order.  End users and
+applications can subscribe certain events according to their content, priority
+and/or the origin.  EventFlow will deliver the events to the customers.
+Besides, it is common to have EventFlow to store every event to Elasticsearch
+for analysis. If there is an enterprise event center, EventFlow can escalate
+events to it also. Here is the diagram of a monitoring system with
+visualizations on both metrics and events.
+</p>
+<IMG VSPACE=10 ALIGN=TOP SRC="misc/MonitorNetwork.jpg" />
+<p>
+EventCollector requires Nginx. EventFlow requires qbroker-1.1.0.jar.
+</p>
+<UL>
+<LI> <a HREF="#Installation"> Installation </a></LI>
+<LI> <a HREF="#Operation"> Operation </a></LI>
+<LI> <a HREF="#Configuration"> Master Configuration File </a></LI>
+<LI> <a HREF="#Receiver"> Receiver </a></LI>
+<LI> <a HREF="#Persister"> Persister </a></LI>
+<LI> <a HREF="#Node"> Node </a></LI>
+<LI> <a HREF="#ConfigList"> ConfigList </a></LI>
+<LI> <a HREF="#Todo"> Todo List </a></LI>
+</UL>
+
+<a NAME="Installation"></a>
+<H2> Installation </H2>
+<p>
+EventFlow is just an instance of QFlow. You can find the installation
+details at <a href="flow.html#Installation"> QFlow </a>.
+</p>
+<p>
+EventCollector needs to be installed on the same box. Please follow the
+instruction for <a href="webadmin.html#Nginx"> WebAdmin </a> to install the web
+server for EventCollector.  After EventFlow is installed, you need to
+configure it to fit your requirements. The following sections are going to
+talk about operations and configurations.
+</p>
+
+<a NAME="Operation"></a>
+<H2>
+Operation
+</H2>
+<p>
+Once EventFlow is installed and configured properly, you should have
+the following filesystem layout:
+</p>
+<TABLE BORDER="1">
+<TR>
+<TH>path</TH><TH>function</TH><TH>example</TH>
+</TR>
+<TR>
+<TD>/opt/qbroker</TD>
+<TD>home dir of QBroker</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/bin</TD>
+<TD>dir for startup script and other utilities</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/bin/QFlow_EVENT.sh</TD>
+<TD>startup script of EventFlow</TD>
+<TD>./QFlow_EVENT.sh restart</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/init.d</TD>
+<TD>dir for init scripts</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/init.d/S50QFlow_EVENT</TD>
+<TD>wrapper for startup script of EventFlow</TD>
+<TD>/opt/qbroker/init.d/S50QFlow_EVENT restart</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/flow</TD>
+<TD>dir for flow instances</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/flow/EVENT</TD>
+<TD>dir of configuration files for EventFlow</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/flow/EVENT/flow.json</TD>
+<TD>master configuration file</TD>
+<TD><a HREF="misc/Flow.json">Flow.json</a></TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/lib</TD>
+<TD>dir for java libraries and native libraries</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/lib/qbroker-1.x.y.jar</TD>
+<TD>jar file</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/templates</TD>
+<TD>dir for template files</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/opt/qbroker/templates/mail.txt</TD>
+<TD>template file for email alert</TD>
+<TD><a HREF="misc/mail.txt">mail.txt</a></TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker</TD>
+<TD>dir for QBroker logs</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/QFlow_EVENT.log</TD>
+<TD>log file of EventFlow</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/QFlow_EVENT.out</TD>
+<TD>stdout and stderr of EventFlow</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/.status</TD>
+<TD>dir for stateful files</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/archive</TD>
+<TD>dir for archived logs</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/checkpoint</TD>
+<TD>dir for checkpoint data</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/events</TD>
+<TD>dir for event logs from all the nodes</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/incoming</TD>
+<TD>dir for incoming events</TD>
+<TD>&nbsp;</TD>
+</TR>
+<TR>
+<TD>/var/log/qbroker/stats</TD>
+<TD>dir for statistical and historical logs</TD>
+<TD>&nbsp;</TD>
+</TR>
+</TABLE>
+<p>
+The normal operation tasks involve start, stop, restart, reload, troubleshoot
+the log files, subscription management and deployment.  EventFlow keeps
+its configuration files in <TT>/opt/qbroker/flow/EVENT</TT>. The external
+subscriptions are in <TT>/opt/qbroker/sub</TT>. Among the various configuration
+files, the master configuration files are most important.  They are
+<TT>/opt/qbroker/flow/EVENT/Flow.json</TT> for EventFlow and
+<TT>/opt/qbroker/sub/*/Sub.json</TT> for external subscriptions.
+Here is an example:
+<a HREF="misc/Sub.json">Sub.json</a>.  The details on the configurations
+will be covered by a dedicated section.  Here we will focus on how to start,
+stop, restart, and reload from command line on the local box and where are
+the logs.
+</p>
+<p>
+To start EventFlow, go to <TT>/opt/qbroker/init.d</TT> and run
+<I>./S50QFlow_EVENT start</I> as the owner or root.  If this command is not
+invoked by its owner, it will try to su to the owner and probably prompt for
+the password of the owner.  EventFlow runs as <TT>qbadm</TT> for the repository.
+In case you want it to restart applications owned by others, you should use
+sudo for the access.  Please check with sudo's man pages on how to allow
+a user to run scripts on behalf of someone else.  There is plenty of examples
+on internet.  You may find some helpful examples.
+To stop EventFlow, go to <TT>/opt/qbroker/init.d</TT> and run
+<I>./S50QFlow_EVENT stop</I> as the owner or root.  The alternative way to
+operate on EventFlow is to use WebAdmin's operation view to start/stop/restart
+it remotely.
+</p>
+<p>
+If you are lucky, EventFlow's process will be running as a daemon.
+Otherwise, you need to troubleshoot the problem.  Always check the errors
+in <TT>/var/log/qbroker/QFlow_EVENT.log</TT> and
+<TT>/var/log/qbroker/QFlow_EVENT.out</TT>.  You should run
+<I>/opt/qbroker/init.d/S50QFlow_EVENT status</I> to check if the process is
+running or not. If you are still not able to start EventFlow, please ask
+around for help.
+</p>
+
+<a NAME="Configuration"></a>
+<H2> Configuration </H2>
+<p>
+EventFlow is a Java container hosting two different types of components.
+The first one is a group of Reporters which are MonitorReport objects used
+to monitor the internal state and the external environment.  The second type is
+a Flow, a MessageFlow object to process events from various sources. 
+In fact, EventFlow is really an instance of MessageFlow where event is
+the message to carry application data.  Here is the diagram of the MessageFlow:
+</p>
+<IMG VSPACE=10 ALIGN=TOP SRC="flow/QFlow_EVENT.jpg" />
+<p>
+The building blocks of a MessageFlow are MessageReceiver, MessagePersister
+and MessageNode.  MessageReceiver is to pick up events from various sources.
+MessagePersister is to deliver events to various destinations.  MessageNode
+has a set of rules to process events. Among various implementations of
+MessageNode, the most important ones are EventCorrelator, EventMonitor and
+EventDispatcher.  EventCorrelator contains a set of rulesets for event
+correlations. Those rulesets can be defined in the MessageNode configuration
+files, or in a separate set of json files. EventMonitor is to keep tracking
+on selected events and their states. EventDispatcher as the instance of
+MessageNode is used to dispatch or publish events. It contains multiple
+rulesets that are also called subscriptions. Each subscription contains an
+EventSelector, and an ActionGroup for actions on the event. By default, all
+subscriptions stay in the same folder. But for easy management, they may be
+stored in separate folders based on their customers. In this case, it will be
+much easy to manage their access control separately. Those subscriptions are
+called the external subscriptions.
+</p>
+<p>
+There are two different type of configuration tasks. The first type is of
+administration tasks on the EventFlow container and workflow. The main
+purpose of this type of tasks is to maintain the feature set on the container
+and manage the rulesets for various customers. The second type is of
+management tasks on external subscriptions and other rulesets for end users.
+Here we will focus on the adminitration tasks only.
+</p>
+<p>
+The configuration files of EventFlow are actually a set of json files. They all
+locate in <TT>/opt/qbroker/flow/EVENT</TT>.  The master configuration file
+is <TT>Flow.json</TT>.  Here is an example of <TT>Flow.json</TT>: 
+</p>
+<pre>
+{
+  "Name": "Flow",
+  "Site": "DEVOPS",
+  "Type": "QFlow",
+  "Category": "EVENT",
+  "Heartbeat": "60",
+  "LogDir": "/var/log/qbroker",
+  "LogDatePattern": "'.'MM",
+  "ConfigDir": "/opt/qbroker/flow/EVENT",
+  "MailHost": "localhost",
+  "Capacity": "1024",
+  "Operation": "query",
+  "Mode": "daemon",
+  "XMode": "1",
+  "MaxNumberFlow": "1",
+  "ConfigRepository": "repository_flow",
+  "IncludePolicy": {
+    "org.qbroker.node.EventCorrelator": "Ruleset",
+    "org.qbroker.node.EventMonitor": "Ruleset",
+    "org.qbroker.node.EventDispatcher": "Ruleset"
+  },
+  "Receiver": [
+    "rcvr_event_log"
+  ],
+  "Node": [
+    "node_parser",
+    "node_switch",
+    "node_format",
+    "node_correlation",
+    "node_monitor",
+    "node_dispatcher_node"
+  ],
+  "Persister": [
+    "pstr_pool",
+    "pstr_pool",
+    "pstr_pool",
+    "pstr_done",
+    "pstr_null",
+    "pstr_failure",
+    "pstr_nohit"
+  ]
+}
+</pre>
+<p>
+From this example of the master configuration file, you will see two parts.
+The first part is the properties for the container of EventFlow itself.
+It specifies how often to run each of reporter components (heartbeat in second),
+where to log, where to send emails and where to find other configurations, etc.
+The second part lists all the components, such as Reporters, Receivers,
+Nodes and Persisters.  The definition of each components should be
+either in the master file or in a separate json file at the configuration
+directory.  The normal administration task is to add, remove or modify those
+components according to the customers' needs. Once the configuration is ready,
+you can follow the operation instructions to start it up.
+</p>
+<p>
+EventFlow is a complex system.  Among the four different types of
+components, Node should be the focus for the admins. For end users,
+the subscriptions should be the focus. If ConfigRepository is configured, you
+can use WebAdmin to deploy changes dynamically without bouncing the container.
+Otherwise when any change has been deployed to EventFlow, it requires
+a bounce to activate the change.
+</p>
+
+<a NAME="Receiver"></a>
+<H3> Receiver </H3>
+<p>
+A Receiver is a MessageReceiver object.  It is used to get events from
+various sources.  To learn about MessageReceiver, you may check this link,
+<a HREF="flow.html">QFlow</a>.
+</p>
+<p>
+You can have as many Receivers as you want.  Each Receiver has its own
+configuration file named after its name plus ".json" extension.
+The name of every Receiver should be unique in the scope of EventFlow.
+Here is an example of LogReceiver:
+</p>
+<pre>
+{
+  "Name": "rcvr_event_log",
+  "ClassName": "org.qbroker.receiver.LogReceiver",
+  "Type": "LogReceiver",
+  "URI": "log:///var/log/nginx/event.log",
+  "LinkName": "root",
+  "Partition": "0,0",
+  "Operation": "fetch",
+  "OldLogFile": "/var/log/nginx/event.log.1",
+  "ReferenceFile": "/var/log/qbroker/.status/event.log",
+  "LogSize": "1",
+  "MaxNumberLogs": "4096",
+  "TimePattern": "ss.SSS",
+  "PatternGroup": [{
+    "Pattern": ["."]
+  }],
+  "Mode": "daemon",
+  "XAMode": "0",
+  "TextMode": "1",
+  "DisplayMask": "6",
+  "MaxRetry": "2",
+  "QuietPeriod": "10",
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "event_log",
+      "URI": "file:///var/log/nginx/event.log",
+      "Type": "FileTester"
+    }]
+  }]
+}
+</pre>
+This json file just defines the receiver. You also need to merge the following
+lines to the master configuration file, <TT>Flow.json</TT>:
+<pre>
+{
+  ...
+  "Receiver": [
+    ...
+    "rcvr_event_log"
+  ],
+  ...
+}
+</pre>
+
+<a NAME="Persister"></a>
+<H3> Persister </H3>
+<p>
+A Persister is a MessagePersister object.  It is used to deliver events to
+various destinations.  To learn about MessagePersister, you may check this link,
+<a HREF="flow.html">QFlow</a>.
+</p>
+<p>
+You can have as many Persisters as you want.  Each Persister has its own
+configuration file named after its name plus ".json" extension.
+The name of every Persister should be unique in the scope of EventFlow.
+Here is an example of EventPersister:
+</p>
+<pre>
+{
+  "Name": "pstr_pool",
+  "ClassName": "org.qbroker.persister.EventPersister",
+  "URI": "event://localhost",
+  "Operation": "invoke",
+  "LinkName": "pool",
+  "DisplayMask": "6"
+}
+</pre>
+<p>
+This json file just defines the persister.  You also need to merge the
+following lines to the master configuration file, <TT>Flow.json</TT>:
+</p>
+<pre>
+{
+  ...
+  "Persister": [
+    ...
+    "pstr_pool"
+  ],
+  ...
+}
+</pre>
+
+<a NAME="Node"></a>
+<H3> Node </H3>
+<p>
+A Node is a MessageNode object.  It is used to process events with
+various rulesets.  To learn about MessageNode, you may check this link,
+<a HREF="flow.html">QFlow</a>.
+</p>
+<p>
+You can have as many Nodes as you want.  Each Node has its own
+configuration file named after its name plus ".json" extension.
+The name of every Node should be unique in the scope of EventFlow.
+Here is an example of configuration for EventMonitor:
+</p>
+<pre>
+{
+  "Name": "node_monitor",
+  "ClassName": "org.qbroker.node.EventMonitor",
+  "Operation": "monitor",
+  "Capacity": "1024",
+  "LinkName": "action",
+  "XAMode": "1",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "StringProperty": {
+    "hostname": "",
+    "name": "",
+    "priority": ""
+  },
+  "Ruleset": {
+    "Name": "shortcut",
+    "PreferredOutLink": "pub",
+    "EventPattern": [{
+      "priority": "^DEBUG$"
+    }]
+  }, "event_tracker"],
+  "OutLink": ["pub", "pub", "pub", "pub"]
+}
+</pre>
+<p>
+In the example above, there are two rulesets.  The first ruleset is a Map.
+It explicitly defines all details for the ruleset.  On the contrast, the second 
+ruleset only has its name listed.  There is no detail defined.  It is assumed
+that the container will load the detail definition in that name and insert the
+object to the ruleset list at the same position.  Therefore, this example shows
+two different ways to define the ruleset. If you decide to use the indirect
+way, make sure the classname of the node is defined in IncludePolicy block of
+the master master configuration file for the message flow.
+</p>
+<p>
+This json file just defines the message node.  You also need to merge the
+following lines to the master configuration file, <TT>Flow.json</TT>:
+<pre>
+{
+  ...
+  "Node": [
+    ...
+    "node_monitor"
+  ],
+  ...
+}
+</pre>
+</p>
+
+<p>
+Here is the example of configuration for EventCorrelator:
+</p>
+<pre>
+{
+  "Name": "node_correlation",
+  "ClassName": "org.qbroker.node.EventCorrelator",
+  "Operation": "correlate",
+  "Capacity": "1024",
+  "LinkName": "parsed",
+  "Heartbeat": "30",
+  "SessionSize": "100",
+  "SessionTimeout": "120",
+  "XAMode": "1",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "StringProperty": {
+    "hostname": "",
+    "name": "",
+    "priority": ""
+  },
+  "Ruleset": [{
+    "Name": "shortcut",
+    "PreferredOutLink": "action",
+    "EventPattern": [{
+      "priority": "^DEBUG$"
+    }]
+  }, "all_mps"],
+  "OutLink ": ["action", "action", "action", "action"]
+}
+</pre>
+</p>
+<p>
+In the example above, there are two rulesets.  The first ruleset is a Map.
+It explicitly defines all details for the ruleset.  On the contrast, the second 
+ruleset only has its name listed.  There is no detail defined.  It is assumed
+that the container will load the detail definition in that name and insert the
+object to the ruleset list at the same position.
+</p>
+<p>
+This json file just defines the message node.  You also need to merge the
+following lines to the master configuration file, <TT>Flow.json</TT>:
+<pre>
+{
+  ...
+  "Node": [
+    ...
+    "node_correlation"
+  ],
+  ...
+}
+</pre>
+</p>
+
+<p>
+Here is an example of configuration for EventDispatcher node:
+</p>
+<pre>
+{
+  "Name": "node_dispatcher",
+  "ClassName": "org.qbroker.node.EventDispatcher",
+  "Operation": "dispatch",
+  "Capacity": "1024",
+  "LinkName": "pub",
+  "XAMode": "1",
+  "DisplayMask": "7",
+  "Debug": "1",
+  "StringProperty": {
+    "uri": "",
+    "status": ""
+  },
+  "Ruleset": ["page_mis", "devteam"],
+  "OutLink": ["pool", "remote", "failure", "remote"]
+}
+</pre>
+</p>
+<p>
+In the example above, there are two rulesets with only names but no details.
+So we can assume any detail functionalitis for them. As an example, let's
+assume the first ruleset is a name referencing a subscription to page MIS group.
+The second ruleset is assumed to reference a ConfigList for DEV team. For the
+detail of a subscription, it will be discussed in another article. For the
+detail of a ConfigList, it will be covered in the next section. Here we just
+need to know that a ConfigList is a list of subscriptions stored and
+managed in a separate repository.
+</p>
+<p>
+This json file just defines the message node.  You also need to merge the
+following lines to the master configuration file, <TT>Flow.json</TT>:
+<pre>
+{
+  ...
+  "Node": [
+    ...
+    "node_dispatcher"
+  ],
+  ...
+}
+</pre>
+</p>
+
+<a NAME="ConfigList"></a>
+<H3> ConfigList </H3>
+<p>
+A ConfigList is an object referencing a list of external rulesets. It is
+designed for separations between the workflow admins and the end users.
+EventFlow is a highly configurable workflow engine for event pub/sub
+services. The subscriptions of the end users are the part of the configurations
+for the workflow. The end users should be able to manage their own event
+subscriptions. On the other hand, the details of the workflow and the pub/sub
+engine should be hidden from the end users. So a list of external rulesets for
+end users' subscriptions is a good solution. This way, end users are able to
+focus on their business needs while they are managing their subscriptions.
+ConfigList is the hook linking the external rulesets to the nodes of
+EventFlow.
+</p>
+<p>
+For example, the dev team wants to subscribe the alerts from their
+applications. So we can set up an instance of ConfigList for the dev team.
+Here is the example:
+</p>
+<pre>
+{
+  "Name": "devteam",
+  "ClassName": "org.qbroker.monitor.PropertyMonitor",
+  "Site": "DEVOPS",
+  "Type": "PropertyMonitor",
+  "RuleType": "ConfigList",
+  "Category": "WDAP",
+  "Description": "external config list",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "URI": "http://panda:8082/sub/devteam/sub.json",
+  "EncryptedAuthorization": "xxxx==",
+  "MaxBytes": "0",
+  "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+ \\w+)",
+  "DateFormat": "EE, dd MMM yyyy HH:mm:ss zz",
+  "Timeout": "60",
+  "Debug": "1",
+  "IgnoredField": ["LastModified"],
+  "Basename": "Sub",
+  "ComponentGroup": {
+    "Sub": ["Subscription", "Correlation", "Escalation"]
+  },
+  "PropertyFile": "/opt/qbroker/sub/devteam/Sub.json",
+  "DataField": {
+    "node_dispatcher": "Subscription",
+    "node_correlation": "Correlation",
+    "node_monitor": "Escalation"
+  },
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "repo_sub",
+      "ClassName": "org.qbroker.monitor.URLMonitor",
+      "URI": "http://panda:8082/sub/devteam/sub.json",
+      "Operation": "HEAD",
+      "EncryptedAuthorization": "xxxx==",
+      "MaxBytes": "0",
+      "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+ \\w+)",
+      "DateFormat": "EE, dd MMM yyyy HH:mm:ss zz",
+      "Timeout": "60",
+      "TimeOffset": "0"
+    }]
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}
+</pre>
+<p>
+As you can see, this example defines an instance of PropertyMonitor with its
+URI pointing to the repository for devteam's subscriptions. Once it is
+deployed, the EventFlow will download the list of configuration for devteam's
+subscriptions periodically. Those subscriptions should be defined in the
+service of devteam under the application of <b>Sub</b>. If another team wants
+a dedicated repository for their subscriptions, the admin just need to create
+a new hook similar to that of devteam for them.
+</p>
+<p>
+For management of external subscriptions, please check
+<a href="eventsub.html"> EventSubscription </a>.
+</p>
+
+<a NAME="Todo"></a>
+<h2> Todo list </h2>
+<p>
+EventFlow is part of QBroker, an open source project at
+<a href="http://github.com/yannanlu/qbroker">GitHub</a>.
+</p>
+
+</body>
+</html>

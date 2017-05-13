@@ -1,0 +1,34 @@
+{
+  "Name": "cron_proc",
+  "ClassName": "org.qbroker.monitor.ProcessMonitor",
+  "Site": "DEVOPS",
+  "Type": "ProcessMonitor",
+  "Category": "CRON",
+  "Description": "Cron Process Monitor",
+  "Step": "1",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "PSCommand": "/bin/ps -o user,pid,args -u root",
+  "PSTimeout": "30",
+  "PatternGroup": [{
+    "Pattern": [{
+      "Option": [{
+        "rpt_sunos": "/usr/sbin/cron"
+      },{
+        "rpt_suse": "/usr/sbin/cron"
+      },{
+        "rpt_redhat": "crond"
+      },{
+        "default": "cron"
+      }]
+    }]
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

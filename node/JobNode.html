@@ -1,0 +1,183 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JobNode </B> </FONT>
+</CENTER>
+
+<p>
+JobNode listens to an input XQueue for JMS messages as the job requests.
+It classifies the incoming messages into groups based on the rulesets
+and the content of the messages. If an incoming message does not hit any
+ruleset, it will be routed to the bypass outlink at once. If the message
+hits a bypass ruleset, it will be routed to the bypass outlink. Otherwise,
+JobNode dispatches the incoming message to an available worker outlink
+based on the priority and the threshod of the group. If there is no enough
+worker available, the incoming message will be cached until the required
+worker resource is available. Meanwhile, JobNode periodically monitors
+all active jobs and sends query events to their worker outlinks. When the
+query events are collected, JobNode will escalate them to the first outlink,
+notice. Once a job has completed, JobNode will collect the request message
+from the worker outlink and cleans up the job.
+</p>
+<img vspace=10 halign=center src="JobNode.jpg" />
+<p>
+JobNode contains multiple rulesets that categorize the incoming messages
+into non-overlapped groups.  Each group has its own priority for scheduling
+and the threshold for the maximum number of active jobs. JobNode also supports
+the dynamic threshold via the list of ActiveTime. By default, all messages
+in the same group are unique. But if KeyTemplate is defined in the ruleset,
+messages with the same key are treated as identical. JobNode will make
+sure only the first one of the identical messages will be scheduled. This
+way, JobNode is able to manage and schedule jobs for each group of messages.
+A group can also define its own Heartbeat and DisplayMask, as well as the a
+bunch of property names. Hearbeat controls how often to query the status on
+active jobs. DisplayMask determines whether to log the escalation messages.
+Property names specify what properties to be copied over to the escalation
+messages.
+</p>
+<p>
+JobNode always creates an extra ruleset, nohit, for those messages not
+hitting any pre-defined rulesets.  For nohit, there is no flow control.
+The nohit messages will be routed to the outlink of bypass.
+</p>
+<p>
+You are free to choose any names for the outlinks.  But JobNode always
+assumes the first outlink for notice, the second for bypass, and
+the rest for workers.
+</p>
+<p>
+Apart from the common properties, there are two implementation specific
+properties for JobNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to dispatch </TD> <TD> 120 </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the field to store return code </TD> <TD> </TD>
+</TR>
+</TABLE>
+where Heartbeat determines how frequently to check those active jobs. If
+StringProperty is defined on the node level, it will be used to build the
+summary on cached messages for display.
+</p>
+
+<p>
+The schedule operation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of JobNode.
+Here are complete properties of rulesets for JobNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number seconds for a job to be active </TD> <TD> 36000 (default: 0 for evergreen) </TD>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval to check active jobs </TD> <TD> 300 (default is set by the node) </TD>
+</TR>
+<TR>
+<TD> Priority </TD> <TD> integer </TD> <TD> optional </TD> <TD> prioeiry to schedule pending jobs </TD> <TD> 120 (default: 0) </TD>
+</TR>
+<TR>
+<TD> Threshold </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of active jobs </TD> <TD> 4 (default: 1) </TD>
+</TR>
+<TR>
+<TD> KeyTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the unique keys of jobs </TD> <TD> ##AssetID## </TD>
+</TR>
+<TR>
+<TD> KeySubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text subsctitution for the unique key </TD> <TD> s/^0// </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for copying properties of from the request messages to escalations </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer of 0 or 1 </TD> <TD> optional </TD> <TD> controling if to display the escalation messages </TD> <TD> 1 (default: 0) </TD>
+</TR>
+</TABLE>
+where KeyTemplate is the template for unique jobs. If it is defined, the node
+will guarentee only one job running for any unique keys.
+</p>
+
+<p>
+Here is an example of JobNode:
+<pre>
+{
+  "Name": "node_job",
+  "ClassName": "org.qbroker.node.JobNode",
+  "Operation": "schedule",
+  "LinkName": "job",
+  "Capacity": "512",
+  "DisplayMask": "0",
+  "Heartbeat": "30",
+  "Debug": "5",
+  "BufferSize": "8192",
+  "StringProperty": {
+    "method": "",
+    "Duration": ""
+  },
+  "Ruleset": [{
+    "Name": "express",
+    "JMSPropertyGroup": [{
+      "method": "^runJob$",
+      "Duration": ["[,300]"]
+    }],
+    "Priority": "650",
+    "Heartbeat": "120",
+    "Threshold": "4",
+    "KeyTemplat": "##method##:##Duration##",
+    "DisplayMask": "1"
+  },{
+    "Name": "job",
+    "JMSPropertyGroup": [{
+      "method": "^runJob$",
+      "Duration": "^\\d+$"
+    }],
+    "Priority": "450",
+    "Heartbeat": "240",
+    "Threshold": "2",
+    "KeyTemplat": "##method##:##Duration##",
+    "DisplayMask": "1"
+  }],
+  "OutLink": ["log", "done", {
+    "Name": "script1",
+    "Capacity": "32"
+  },{
+    "Name": "script2",
+    "Capacity": "32"
+  },{
+    "Name": "script3",
+    "Capacity": "32"
+  },{
+    "Name": "script4",
+    "Capacity": "32"
+  }]
+}
+</pre>
+where there are two rulesets with different hearteats.
+</p>
+
+</body>
+</html>

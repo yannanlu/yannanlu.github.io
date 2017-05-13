@@ -1,0 +1,113 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> DocumentPersister </B> </FONT>
+</CENTER>
+
+<p>
+DocumentPersister is a JMS message consumer that persists the content of the
+messages to a document-oriented database.  It listens to the XQueue and receives
+JMS Messages as the requests.  Either it inserts the content of the message on
+a remote server as a document, or it finds a document from a remote server
+according to the content of the message.  In case of find, DocumentPersister
+puts the queried result to the message body and removes it from the XQueue.
+On the other end of the XQueue, the node is supposed to retrieve the document
+from the message.  DocumentPersister supports flow control and allows
+object control from its owner.  It is fault tolerant with retry and idle
+options.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for DocumentPersister.  Most of them depends on the schemes.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> CollectionField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for the name of the collection required for MongoDB </TD> <TD> (default: Collection) </TD>
+</TR>
+<TR>
+<TD> BucketField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for the name of the bucket required for Riak </TD> <TD> (default: Bucket) </TD>
+</TR>
+<TR>
+<TD> KeyField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for
+Riak key </TD> <TD> (default: RIAK) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> QueryField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for
+Mongo query statement </TD> <TD> (default: Query) </TD>
+</TR>
+<TR>
+<TD> ResultField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to
+store the number of items returned </TD> <TD> (default: QueryResult) </TD>
+</TR>
+<TR>
+<TD> ResultType </TD> <TD> integer </TD> <TD> optional </TD> <TD> type of the result </TD> <TD> 8 for JSON (default: 1) </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the request </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> Retry </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of retry before to give up the delivery </TD> <TD> 2 </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Currently, DocumentPersister only supports MongoDB, in terms of the scheme
+of mongodb and Riak.  In the near future, it will support CouchDB. Here is the
+matrix of supported operations for various schemes:
+<TABLE border=1>
+<TR>
+<TH> Scheme </TH> <TH>Operation</TH> <TH> Description </TH>
+</TR>
+<TR>
+<TD> mongodb </TD> <TD> update </TD> <TD> update the content to a collection </TD>
+</TR>
+<TR>
+<TD> mongodb </TD> <TD> find </TD> <TD> query documents from a collection </TD>
+</TR>
+<TR>
+<TD> riak </TD> <TD> store </TD> <TD> store documents to a bucket </TD>
+</TR>
+<TR>
+<TD> riak </TD> <TD> download </TD> <TD> download documents from a bucket </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of DocumentPersister:
+
+<pre>
+{
+  "Name": "pstr_doc",
+  "ClassName": "org.qbroker.persister.DocumentPersister",
+  "URI": "mongodb://localhost/test",
+  "LinkName": "pool",
+  "Operation": "find",
+  "ResultType": "8",
+  "BaseTag": "Record",
+  "XAMode": "1",
+  "Retry": "1",
+  "Template": "##body##",
+  "DisplayMask": "6",
+  "StringProperty": {
+    "DBName": "",
+    "Collection": ""
+  }
+}
+</pre>
+where it expects the message body containing the query data as the request
+and sends the query to test database of the MongoDB server. 
+</p>
+
+</body>
+</html>

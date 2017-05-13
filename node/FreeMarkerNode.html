@@ -1,0 +1,169 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> FreeMarkerNode </B> </FONT>
+</CENTER>
+
+<p>
+FreeMarkerNode extracts the path of a FreeMarker template and the data from
+the incoming JMS message and applies the FreeMarker template to the data.
+The output will be set to the message body as the result. The message will
+be routed to the first outlink.
+</p>
+<img vspace=10 halign=center src="FreeMarkerNode.jpg" />
+<p>
+FreeMarkerNode contains a number of predefined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also defines the transformation
+parameters, such as DataType, RootNodeName and a template to build the the
+paths to the FreeMarker template files, as well as their TTL.
+The cache count of templates for the rule will be stored to RULE_PEND. It
+will be updated when the session time exceeds the given SessionTimeout.
+</p>
+<p>
+FreeMarkerNode always adds an extra ruleset for the nohit messages.
+This nohit ruleset is always the first ruleset with the id of 0.
+On the node level, DisplayMask and StringProperty control
+the display result of outgoing messages.
+</p>
+<p>
+You are free to choose any names for the three fixed outlinks.  But FreeMarkerNode
+always assumes the first outlink for done, the second for failure and the last
+for nohit.
+</p>
+
+<p>
+Apart from the common properties, there are three implementation specific
+properties for FreeMarkerNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> SessionTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in sec for a session </TD> <TD> 3600 (default: 0) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+The format operation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of FreeMarkerNode.
+Here are complete properties of rulesets for FreeMarkerNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> URITemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the full path of the template file </TD> <TD> /opt/qbroker/ftl/##TempName##.ftl </TD>
+</TR>
+<TR>
+<TD> URISubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text substitution for the full path of the template file </TD> <TD> s/\.txt$/\.ftl/ </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds to cache the FreeMarker templates </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> RootNodeName </TD> <TD> string </TD> <TD> optional </TD> <TD> root node name for the data model </TD> <TD> Doc (default: "") </TD>
+</TR>
+<TR>
+<TD> DataType </TD> <TD> string </TD> <TD> optional </TD> <TD> data type of the payload for the data model </TD> <TD> JSON (default: JMS) </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where RootNodeName specifies the name for the root node in the FreeMarker data
+model.  PreferredOutLink can be defined for bypass rulesets only.  In this case,
+the messages of the group will not be transformed.  Here is an example for
+the bypass ruleset:
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it routes the messages to the outlink of BYPASS.
+</p>
+<p>
+Here is an example of the transform ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "tm",
+    "JMSPropertyGroup": [{
+      "FMTemp": "."
+    }],
+    "DataType": "XML",
+    "RootNodeName": "Doc",
+    "URITemplate": "/opt/qbroker/ftl/##FMTemp##.ftl",
+    "TimeToLive": "7200"
+  }],
+  ...
+}
+</pre>
+where it expects that the message has defined the template file name in its
+FMTemp property.  The node will extract the XML data from the message body.
+Upon success, the message body will contain the new content formatted from the
+FreeMarker template.
+</p>
+
+<p>
+Here is an example of FreeMarkerNode:
+<pre>
+{
+  "Name": "node_fm",
+  "ClassName": "org.qbroker.node.FreeMarkerNode",
+  "Description": "format messages",
+  "Operation": "format",
+  "LinkName": "root",
+  "Capacity": "6",
+  "WaitTime": "50",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "SessioTimeout": "600",
+  "Ruleset": [{
+    "Name": "html",
+    "JMSPropertyGroup": [{
+      "FMTemp": "."
+    }],
+    "URITemplate": "/opt/qbroker/ftl/##FMTemp##.ftl",
+    "TimeToLive": "3600"
+  }],
+  "OutLink": ["out", "failure", "nohit"]
+}
+</pre>
+</p>
+
+</body>
+</html>

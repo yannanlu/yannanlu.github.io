@@ -1,0 +1,267 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> MonitorNode </B> </FONT>
+</CENTER>
+
+<p>
+MonitorNode is a monitor container hosting dynamic monitor instances.
+It listens to an input XQueue for JMS messages as requests to monitor certain
+occurrences.  If the message contains a request for a new monitor, it will
+create the monitor instance according to the ruleset and the content.  Upon
+success, the incoming message will be routed to the outlink of bypass. If it
+fails to create the object, the message will be routed to the outlink of
+failure.  If there is no ruleset to handle the message, it will be routed to
+the outlink of nohit.  Meanwhile, MonitorNode periodically sends all active
+monitor instances as tasks to the outlink of pool. On the other end of the
+outlink, a number of MonitorPersisters will be listening on the outlink for
+tasks. They will run each monitor tasks and updates the results for the tasks.
+Each task will be collected for evaluations on its result. MonitorNode will
+apply the predefined EventPattern on the ruleset to chech the result.  If the
+result is as expected,  MonitorNode will generate a new message and routes it
+to the outlink of done.  Then the monitor will be terminated and the monitor
+instance will be destroyed.
+</p>
+<img vspace=10 halign=center src="MonitorNode.jpg" />
+<p>
+MonitorNode also contains a number of predefined rulesets.  These
+rulesets categorize messages into non-overlapping groups via the filters.
+Therefore, each rule defines a unique message group.  If a ruleset is not
+of bypass, it is supposed to define a template to construct properties for
+new monitor instances.  It also contains multiple parameters for the node to
+manage active monitor instances. For example, TimeToLive specifies the lifetime
+in seconds of the new monitor instance. Once the instance passes that time span,
+MonitorNode will escalate the final event and terminates the instance. Option is
+another parameter which controls when to deliver the original request.  By
+default, it is zero and there is no wait on the final event.  If it is 1,
+MonitorNode will hold the request and waits until the final event is
+escalated.  Heartbeat determines how often to run the monitor instance.  The
+non-bypass rulesets may also have a list of EventPatterns to determine when
+to escalate the final event for the occurrence and to terminate the request.
+The total number of active occurrences is stored into the RULE_PEND field.
+For those messages falling off all defined rulesets, MonitorNode always
+creates an extra ruleset, nohit, to handle them.  Therefore all the nohit
+messages will be routed to the outlink of nohit.
+</p>
+<p>
+You are free to choose any names for the five fixed outlinks.  But
+MonitorNode always assumes the first outlink for pool, the second for done,
+the third for bypass, the fourth for failure and the last for nohit.
+</p>
+<p>
+Apart from the common properties, there are two implementation specific
+properties for MonitorNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to dispatch </TD> <TD> 120 (default: 60) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the field to store return code </TD> <TD> </TD>
+</TR>
+</TABLE>
+where Heartbeat determines how frequently to run those monitors. If
+StringProperty is defined on the node level, it will be used to build the
+summary on cached messages for display.
+</p>
+
+<p>
+The monitor operation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of MonitorNode.
+Here are complete properties of rulesets for MonitorNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number seconds for a monitor to be active </TD> <TD> 36000 (default: 0 for evergreen) </TD>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval to dispatch monitor tasks </TD> <TD> 300 (default is set by the node) </TD>
+</TR>
+<TR>
+<TD> Capacity </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of active monitors </TD> <TD> 24 (default: 64) </TD>
+</TR>
+<TR>
+<TD> Option </TD> <TD> integer of 0 or 1 </TD> <TD> optional </TD> <TD> on-wait option controling when to deliver the original messages </TD> <TD> 1 (default: 0 for no wait) </TD>
+</TR>
+<TR>
+<TD> MaxRetry </TD> <TD> integer </TD> <TD> optional </TD> <TD> max retry on failed tasks </TD> <TD> 1 (default: 2) </TD>
+</TR>
+<TR>
+<TD> EventPattern </TD> <TD> list </TD> <TD> optional </TD> <TD> list of EventPattern groups on monitor events to terminate monitors </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> Monitor </TD> <TD> map </TD> <TD> mandatory for monitors only </TD> <TD> configuration template of monitors </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for logging on properties of messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> display mask for logging </TD> <TD> 6 (default: 0) </TD>
+</TR>
+</TABLE>
+where Monitor is the configuration template for monitor instances with
+certain variables.  The node will resolve those variables based on the data
+extracted from the request message.  You can find many examples on
+MonitorAgent page.
+</p>
+
+<p>
+Here is an example of MonitorNode:
+<pre>
+{
+  "Name": "node_monitor",
+  "ClassName": "org.qbroker.node.MonitorNode",
+  "Operation": "monitor",
+  "LinkName": "monitor",
+  "Capacity": "32",
+  "DisplayMask": "0",
+  "Heartbeat": "300",
+  "Debug": "31",
+  "Ruleset": [{
+    "Name": "proxy",
+    "JMSPropertyGroup": [{
+      "AssetID": "^\\d+$",
+      "Type": "^8$",
+      "DirName": ".",
+      "ZipCode": "^\\d\\d\\d$"
+    }],
+    "TimeToLive": "14400",
+    "Heartbeat": "300",
+    "Option": "1",
+    "MaxRetry": "3",
+    "Capacity": "24",
+    "DisplayMask": "71",
+    "StringProperty": {
+      "FileName": "",
+      "AssetID": "",
+      "Type": "",
+      "ZipCode": ""
+    },
+    "Monitor": {
+      "Name": "age_##AssetID##",
+      "ClassName": "org.qbroker.monitor.AgeMonitor",
+      "Site": "FAM",
+      "Type": "AgeMonitor",
+      "Category": "MONITOR",
+      "Description": "wait on the file",
+      "URI": "script:///fsfileinfo",
+      "Script": "/opt/qbroker/bin/fileinfo.sh ##DirName##/8/main/##ZipCode##/##AssetID##.8",
+      "Timeout": "45",
+      "Pattern": "\\s+Last Modification: (\\d\\d-\\w+-\\d\\d\\d\\d \\d\\d:\\d\\d:\\d\\d)",
+      "DateFormat": "dd-MMM-yyyy HH:mm:ss",
+      "Step": "1",
+      "Tolerance": "0",
+      "MaxRetry": "2",
+      "MaxPage": "1",
+      "ExceptionTolerance": "-1",
+      "ActiveTime": {
+        "TimeWindow": [{
+          "Interval": "00:00:00-24:00:00",
+          "Threshold": "-1800"
+        }]
+      }
+    },
+    "EventPattern": [{
+      "status": "^(OCCURRED|Occurred)$"
+    }]
+  },{
+    "Name": "avi",
+    "JMSPropertyGroup": [{
+      "Type": "^1$",
+      "AssetID": "^\\d+$",
+      "DirName": ".",
+      "ZipCode": "^\\d\\d\\d$"
+    ]},
+    "TimeToLive": "64800",
+    "Heartbeat": "600",
+    "MaxRetry": "3",
+    "Option": "1",
+    "Capacity": "8",
+    "DisplayMask": "71",
+    "StringProperty": {
+      "DirName": "",
+      "AssetID": "",
+      "Type": "",
+      "ZipCode": "'
+    },
+    "Monitor": {
+      "Name": "avi_##AssetID##",
+      "ClassName": "org.qbroker.monitor.AgeMonitor",
+      "Site": "FAM",
+      "Type": "AgeMonitor",
+      "Category": "MONITOR",
+      "Description": "wait on the file",
+      "URI": "script:///fsfileinfo",
+      "Script": "/opt/qbroker/bin/fileinfo.sh ##DirName##/1/main/##ZipCode##/##AssetID##.1",
+      "Timeout": "45",
+      "Pattern": "\\s+Last Modification: (\\d\\d-\\w+-\\d\\d\\d\\d \\d\\d:\\d\\d:\\d\\d)",
+      "DateFormat": "dd-MMM-yyyy HH:mm:ss",
+      "Step": "1",
+      "Tolerance": "0",
+      "MaxRetry": "2",
+      "MaxPage": "1",
+      "ExceptionTolerance": "-1",
+      "EmptyDataIgnored": "false",
+      "DependencyGroup": [{
+        "Dependency": [{
+          "Name": "avi",
+          "Type": "FileTester",
+          "URI": "file://##DirName##/1/transformed",
+          "Pattern": "^##AssetID##(-....)?\\.avi(\\.err)?$",
+          "DisableMode": "-1"
+        }]
+      }],
+      "ActiveTime": {
+        "TimeWindow": [{
+          "Interval": "00:00:00-24:00:00",
+          "Threshold": "01:30:00,02:00:00,02:30:00"
+        }]
+      }
+    },
+    "EventPattern": [{
+      "status": "^(NORMAL|Normal|Disabled|DISABLED)$"
+    }]
+  },
+  "OutLink": ["pool", "done", "null", {
+    "Name": "failure",
+    "Capacity": "32",
+    "Partition": "12,4"
+  },{
+    "Name": "nohit",
+    "Capacity": "32",
+    "Partition": "12,4"
+  }
+}
+</pre>
+where there are two rulesets with different hearteats.  Frequently, the node
+dispatches the active monitors to the pool.  Then it tries to collect the
+events sent from the monitors.  If an event match the EventPattern, the monitor
+will be terminated and a new event will be escalated.
+</p>
+
+</body>
+</html>

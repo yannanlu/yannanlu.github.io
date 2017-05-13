@@ -1,0 +1,119 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JDBCReceiver </B> </FONT>
+</CENTER>
+
+<p>
+JDBCReceiver is a JMS message producer that queries on a JDBC data source
+repeatedly and converts the query result into JMS messages, one record for
+each message.  The new JMS messages will be put into the internal XQueue as
+the output.  JDBCReceiver supports all JDBC implentations via DBDriver.  Only
+one operation, select, is supported.  In order to select repeatedly,
+DependendyGroup is required to control if the select operation is skipped or
+not. Both PauseTime and the Step of the report control the frequency of the
+operation. It also supports flow control and XA.  Fault tolerance with auto
+reconnections is built in.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for JDBCReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> DBDriver </TD> <TD> string </TD> <TD> mandatory </TD> <TD> full classname of JDBC driver </TD> <TD> oracle.jdbc.driver.OracleDriver </TD>
+</TR>
+<TR>
+<TD> SQLQuery </TD> <TD> string </TD> <TD> mandatory </TD> <TD> SQL query statement </TD> <TD> SELECT name, status FROM table </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> ResultField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store the number of rows returned </TD> <TD> (default: SQLResult) </TD>
+</TR>
+<TR>
+<TD> IDColumn </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the column that is unique as an ID </TD> <TD> MESSAGE_ID </TD>
+</TR>
+<TR>
+<TD> KeyColumn </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the column that monotonic increases </TD> <TD> END_TIME </TD>
+</TR>
+<TR>
+<TD> TimePattern </TD> <TD> string </TD> <TD> optional </TD> <TD> Simple Time P
+attern to parse the KeyColumn for timestamp </TD> <TD> yyyy-MM-dd HH:mm:ss </TD>
+</TR>
+<TR>
+<TD> ReferenceFile </TD> <TD> string </TD> <TD> optional </TD> <TD> filename to
+ store the state info </TD> <TD> /var/log/qbroker/.status/apns.dat </TD>
+</TR>
+<TR>
+<TD> DependencyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of dependencis to control frequency of operations </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where KeyColumn specifies the name of the column whose value will be used as
+an monotonic increasing number or timestamp. If KeyColumn is defined, SQLQuery
+is supposed to contain 1 parameter in the its WHERE clause to select new
+records. The receiver will set the value before the each query. If ReferenceFile
+is defined also, the state info will be persisted to the file. Please make sure
+to define DependencyGroup for repeated select. Otherwise, the reciever will stop
+after the first query.
+</p>
+
+<p>
+Here is an example of JDBCReceiver:
+
+<pre>
+{
+  "Name": "rcvr_db",
+  "ClassName": "org.qbroker.receiver.JDBCReceiver",
+  "URI": "jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=devdb1.qbroker.org)(PORT=1530))(ADDRESS=(PROTOCOL=TCP)(HOST=devdb2.qbroker.org)(PORT=1530))(CONNECT_DATA=(failover=true)(server=dedicated)(Service_name=devdb.qbroker.org)))",
+  "Username": "monitor",
+  "Password": "xxxx",
+  "Operation": "select",
+  "SQLQuery": "SELECT message_id, status, apns_delivered_device_count AS "COUNT", to_char(send_started, 'YYYY-MM-DD HH24:MI:SS') AS "SEND_TIME", to_char(apns_send_ended, 'YYYY-MM-DD HH24:MI:SS') AS "APNS_END" FROM notify_owner.message_log where apns_send_ended >= %%TIMESTAMP:D%% ORDER BY apns_send_ended",
+  "LinkName": "root",
+  "Partition": "0,0",
+  "Mode": "daemon",
+  "XAMode": "0",
+  "TextMode": "1",
+  "KeyColumn": "APNS_END",
+  "IDColumn": "MESSAGE_ID",
+  "TimePattern": "yyyy-MM-dd HH:mm:ss",
+  "ReferenceFile": "/var/log/qbroker/.status/apns.dat",
+  "MaxNumberMessage": "200",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "DisplayMask": "0",
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "skipper",
+      "Type": "ActionSkipper",
+      "Step": "12",
+      "ActiveTime": {
+        "TimeWindow": [{
+          "Interval": "00:00:00-24:00:00"
+        }]
+      }
+    }]
+  }]
+}
+</pre>
+where the receiver monitors a the column of APSN_END for new records. There is
+one dependency that just wakes up every 12 heartbeat (PauseTime, 5 sec by
+default). Therefore, the reciever run the query every min (12 x 5 = 60). In the
+SQLQuery, there is one parameter, %%TIMESTAMP:D%%. It expects the latest
+timestamp. The receiver will get that value from APNS_END and sets it before
+each query. If any records with newer timestamps show up, they will be picked
+up by the receiver. For each new record, there is a new message generated and
+put to the queue.
+</p>
+
+</body>
+</html>

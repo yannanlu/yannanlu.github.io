@@ -1,0 +1,99 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> LogScissor </B> </FONT>
+</CENTER>
+
+<p>
+LogScissor is a JMS message producer that monitors on a remote log file and
+renames it into a new file with an id for download.  It then creates a message
+with the full path of the new file and puts it into the internal XQueue as the
+notification.  Therefore, the new file is able to be downloaded downstream in
+time.  LogScissor supports flow control and XA.  Fault tolerance with auto
+reconnections is built in.
+</p>
+<p>
+LogScissor requires the remote log is slicable.  The application of the log
+is supposed to open the log file to append for each log entry.  Therefore,
+once the log gets renamed, a new log will be created on the new entries.
+So the operation is called slice.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for LogScissor.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> AutoClose </TD> <TD> string of true or false </TD> <TD> optional </TD> <TD> flag to auto close ftp connection </TD> <TD> true (default: false) </TD>
+</TR>
+<TR>
+<TD> StagingDir </TD> <TD> string </TD> <TD> optional </TD> <TD> path to the staging aera for the downloaded logs </TD> <TD> /var/log/qbroker/staging </TD>
+</TR>
+<TR>
+<TD> MaxFileSize </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of bytes to store the content into message </TD> <TD> 1024000 </TD>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to check the log file </TD> <TD> 5 (default: 30) </TD>
+</TR>
+<TR>
+<TD> Threshold </TD> <TD> integer </TD> <TD> optional </TD> <TD> min number of bytes required to slice the log file </TD> <TD> 5 (default: 30) </TD>
+</TR>
+<TR>
+<TD> SessionTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in second to slice the log file in case the file is small </TD> <TD> 45 (default: 60) </TD>
+</TR>
+<TR>
+<TD> SOTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in second for TCP operation </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> PropertyMap </TD> <TD> map </TD> <TD> optional </TD> <TD> map for required properties </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of LogScissor:
+
+<pre>
+{
+  "Name": "rcvr_notice_rlog",
+  "ClassName": "org.qbroker.receiver.LogScissor",
+  "URI": "ftp://panda1/var/log/qbroker/relay/notice_log",
+  "Username": "qmadm",
+  "Password": "xxxx",
+  "LinkName": "root",
+  "DisplayMask": "6",
+  "Operation": "slice",
+  "Heartbeat": "10",
+  "SessionTimeout": "240",
+  "AutoClose": "true",
+  "Threshold": "50",
+  "XAMode": "1",
+  "TextMode": "1",
+  "MaxFileSize": "4000000",
+  "StagingDir": "/var/log/qbroker/staging",
+  "PropertyMap": {
+    "HostName": "HostName",
+    "FileName": "FileName",
+    "FileSize": "FileSize",
+    "LocalStore": "LocalStore"
+  },
+  "StringProperty": {
+    "JMSType": "notice"
+  } 
+}
+</pre>
+where it monitors the log file, keyframe_log, on mam1svc4prod1.  If it is not
+empty and the session expires, the receiver will rename the file and notifies
+the downstream by sending a message with the property of FileName set to the
+path of sliced log file.  Once the downstream picks up the message, the log
+file will be downloaded.
+</p>
+
+</body>
+</html>

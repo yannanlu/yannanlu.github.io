@@ -1,0 +1,183 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> XPathNode </B> </FONT>
+</CENTER>
+
+<p>
+XPathNode parses XML payload of JMS messages and retrieves data from the XML
+payload according to the predifined XPath expressions.  It then sets them into
+message's properties.  The original XML payload should be always stored in
+the message body.  XPathNode will not modify the XML payload.  There are three
+outlinks, done for all parsed messages, nohit for those messages not belonging
+to any predefined rulesets, failure for those messages failed in the XPath
+evaluations. 
+</p>
+<img vspace=10 halign=center src="XPathNode.jpg" />
+<p>
+XPathNode contains a number of predefined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also defines the XPath expressions.
+The original XML payload should be always stored in the message body.  Due to
+JMS specifications, you have to clear user properties before resetting them on
+a readonly message.  You can specify ResetOption in a ruleset so that the
+message header will be reset for modifications.  Its value is 0 for no reset,
+1 for optional reset and 2 for guaranteed reset.
+</p>
+<p>
+XPathNode supports dynamic setting of xpath expressions.  It means you can
+reference properties of the message in your xpath expressions.  XPathNode
+will retrieve the data from the incoming message and compile the expressions
+before the evaluation.
+</p>
+<p>
+XPathNode allows one of the xpath expressions to select a list of items.
+In this case, ListKey has to be defined. It specifies the key for that
+special xpath expression. The expression will be applied in the context of
+XPathConstants.NODESET. XPathNode will retrieves the data from each item
+and appends them one by one with a predefined delimiter.
+</p>
+<p>
+XPathNode always adds an extra ruleset for the nohit messages.
+This nohit ruleset is always the first ruleset with the id of 0.
+On the node level, DisplayMask and StringProperty control
+the display result of outgoing messages.
+</p>
+<p>
+You are free to choose any names for the three fixed outlinks.  But XPathNode
+always assumes the first outlink for done, the second for failure and the last
+for nohit.
+</p>
+
+<p>
+The XPath evaluation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of XPathNode.
+Here are complete properties of rulesets for XPathNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> ResetOption </TD> <TD> integer </TD> <TD> optional </TD> <TD> option to reset properties </TD> <TD> 2 (default: 0) </TD>
+</TR>
+<TR>
+<TD> XPathExpression </TD> <TD> map </TD> <TD> mandatory for XPath only </TD> <TD> for resetting properties of messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> ListKey </TD> <TD> string </TD> <TD> key name of the XPath expression for list aggregation </TD> <TD> to select a list of items </TD> <TD> ID </TD>
+</TR>
+<TR>
+<TD> Delimiter </TD> <TD> string </TD> <TD> required for list aggregation </TD> <TD> delimiter used to separate listed data </TD> <TD> , </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where XPathExpression specifies the details of the XPath expressions.
+PreferredOutLink can be defined for bypass rulesets only.  In this case,
+the messages of the group will not be parsed.  Here is an example for
+the bypass ruleset:
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it routes the messages to the outlink of BYPASS.
+</p>
+<p>
+Here is an example of the XPath ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "script",
+    "JMSPropertyGroup": [{
+      "operation": "^start$"
+    }],
+    "ResetOption": "1",
+    "XPathExpression": {
+      "ActionScript": "/*/StartScript"
+    }
+  },{
+  ...
+  }],
+  ...
+}
+</pre>
+where it extracts the content from the XML payload and sets the value on the
+property of ActionScript.
+</p>
+
+<p>
+Here is an example of XPathNode:
+<pre>
+{
+  "Name": "node_xpath",
+  "ClassName": "org.qbroker.node.XPathNode",
+  "Description": "xparse messages",
+  "Operation": "evaluate",
+  "LinkName": "root",
+  "Capacity": "6",
+  "DisplayMask": "0",
+  "Debug": "19",
+  "Ruleset": [{
+    "Name": "test",
+    "ResetOption": "1",
+    "JMSPropertyGroup": [{
+      "JMSType": "."
+    }],
+    "XPathExpression": {
+      "MTC": "//MediaTimePoint",
+      "RTC": "//MediaRelTimePoint",
+      "Millis": "//MediaTimeMillis"
+    },
+  }],
+  "OutLink": [
+    "parsed",
+    {
+      "Name": "failure",
+      "Capacity": "24",
+      "Partition": "0,6"
+    },{
+      "Name": "nohit",
+      "Capacity": "24",
+      "Partition": "0,6"
+    }
+  ]
+}
+</pre>
+</p>
+
+</body>
+</html>

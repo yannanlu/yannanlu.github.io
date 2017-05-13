@@ -1,0 +1,744 @@
+<html>
+<head>
+<title>Flow</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> QBroker_PUB Message Flow </B> </FONT> 
+</CENTER>
+<a NAME="Overview"></a>
+<h2> Overview </h2>
+<p>
+QBroker is actually a JMS application container.  It hosts multiple JMS
+applications in terms of message flows. A generic message flow contains 3 types
+of nodes, MessageReceiver, MessagePersister and MessageNode. MessageReceiver
+and MessagePersister are for message I/O. MessageNode is for message processing.
+A message flow should have minimum two nodes, a MessageReceiver for picking up
+messages and a MessagePersister to deliver the messages. All the nodes should
+be linked to at least another node so that the messages can flow from one node
+to another. With all nodes linked together, a message flow will process
+messages just like a production pipeline.
+</p>
+<p>
+QBroker_PUB is an implementation of QBroker message flow to take snapshots on
+the election feeds on <tt>b.data.cnn.com</tt>. During the election night,
+ESS Publisher is going to publish json feeds to the LMS queue on subscriber16.
+The Loki flow on the box will consume the messages and publishes the content
+to the production LSD. Since there is no message flow to archive the messages
+published by ESS Publisher, webdev team wants to take snapshots on the feeds
+frequently so that we will be able to know what content is published at what
+time.  Here we are going to cover the details on the Design and Implementation.
+</p>
+
+<UL>
+<LI> <a HREF="#Overview"> Overview </a></LI>
+<LI> <a HREF="#UseCase"> Use Case </a></LI>
+<LI> <a HREF="#Design"> High Level Design </a></LI>
+<LI> <a HREF="#Implementation"> Implementation </a></LI>
+<LI> <a HREF="#Deployment"> Deployment </a></LI>
+<LI> <a HREF="#Test"> Test </a></LI>
+</UL>
+
+<a NAME="UseCase"></a>
+<h2> Use Case </h2>
+<b>1 Download the json feeds in various intervals:</b>
+<p>
+Webdev team wants to download the a bunch of json feeds from
+<tt>b.data.cnn.com</tt>. Here are some of the URLs:
+</p>
+<ul>
+<li>/ELECTION/2012/full/P.full.json</li>
+<li>/ELECTION/2012/flipper/P.json</li>
+<li>/ELECTION/2012/NY/races/NYP00.json</li>
+<li>/ELECTION/2012/NY/state/NY.json</li>
+<li>/ELECTION/2012/NY/county/P.json</li>
+<li>/ELECTION/2012/NY/maps/NYP00.orange.json</li>
+<li>/ELECTION/2012/NY/xpoll/Pfull.json</li>
+</ul>
+<p>
+where different URLs should be downloaded in diferent intervals.
+The mtime of the feeds is required to track the content modify time.
+The list of the URLs will be provided.
+</p>
+<b>2 Insert the content and mtime to a MySQL database:</b>
+<p>
+All the downloaded content should be inserted into the table of SNAPSHOTS of a
+MySQL database with ctime, mtime, folder name and feed name, etc. Therefore,
+it will be easy to find feeds with certain queries.
+</p>
+<b>3 Keep one week of data only in the database:</b>
+<p>
+The number of snapshots may grow quickly. So there is a need to rotate them
+to keep only the recent snapshots.
+</p>
+
+<a NAME="Design"></a>
+<h2> High Level Design </h2>
+<p>
+Since the use case is quite simple, you may find it is much easier to implement
+a bunch of Ruby scripts under crontab. But here, we are going to implement a
+solution in the framework of QBroker. First let us outline the tasks in a
+workflow chart for the implementation with our high level design:
+</p>
+<OL>
+<LI> generate events in certain intervals so that they can trigger tasks</LI>
+<LI> use pub/sub model to react on the time events with the list of urls</LI>
+<LI> for each url, download the content and retrieve its mtime</LI>
+<LI> for each downloaded content, parse the url for folder, and feed name, etc first and then build the SQL statement</LI>
+<LI> insert the content to the DB with mtime and folder names</LI>
+<LI> detete the old content so that only a week of data in the DB</LI>
+</OL>
+<p>
+In the framework of QBroker, there is no need to write any source code.
+We just need to convert the workflow into a message flow with those tasks
+mapped into certain building blocks, such as MessageNode, MessageReceiver and
+MessagePersister.
+</p>
+<p>
+The first task and the last task are for message I/O. In the framework of
+QBroker, HeartbeatGenerator is designed to generate messages with various time
+signatures. Therefore, we are going to have an instance of HeartbeatGenerator
+to accomplish the first task. For database operation, JDBCPersister is
+designed to update a database with certain SQL statement. So it will be used to
+accomplish the last task. FilePersister will be used to download content from
+a web service in task 3.
+</p>
+<p>
+Once the messages are available with the time signature, we need a way to
+trigger a group of requests to download json feeds. PublishNode is designed for
+one message to trigger multiple subscriptions. So for task 2, we are going to
+use PublishNode with a bunch of subscripions. Each subscription will generate
+a unique URI for the json feeds.
+</p>
+<p>
+With the URI set to the messages, we need a way to download web content from
+ad hoc URIs. CollectNode is designed to process on-demand requests and collect
+their responses. For task 3, therefore, we are going to take CollectNode and
+link it to an instance of FilePersister.
+</p>
+<p>
+For task 4, FormatNode is the best choice.  By design, FormatNode is to
+add new properties or modify existing proerties on a message. So it should
+be easy to set the new properties for task 4.
+</p>
+<p>
+Task 5 is to execute the SQL statement on a DB connection. JDBCPersister is
+the best choice. To summarize, here is the diagram of the message flow:
+</p>
+<IMG VSPACE=10 ALIGN=TOP SRC="../misc/QBroker_PUB.jpg" />
+<p>
+In the diagram, the dash lines indicate the interactions with exteranl
+data sources. In the framework of QBroker, each node is a dedicated thread.
+They communicate with the linked nodes via the internal queues.
+</p>
+
+<a NAME="Implementation"></a>
+<h2> Implementation </h2>
+<p>
+In the framework of QBroker, the implementation of a high level design for
+a message flow involves only the configurations of each nodes. There is no need
+to touch any source code since all the functionalities and features have
+already been built-in in terms of the nodes. It is similar to use various
+Apache modules to build a web server.  For each type of nodes, there are some
+<a href="../qbroker.html">documentations and examples</a> available.
+So it will not be too hard to figure how to configure a node.  Let us try to
+configure the nodes listed in the diagram one by one.
+</p>
+<b>1 HeartbeatGenerator: heartbeat_in</b>
+<p>
+The first node to config is an instance of
+<a href="../receiver/HeartbeatGenerator.html"> HeartbeatGenerator </a>,
+<b>heartbeat_in</b>. It periodically generates messages according to the
+predefined occurrence policies. Based on the information listed in the use case
+page, we have the configuration xml file for this node: 
+</p>
+<pre>
+&lt;heartbeat_in&gt;
+  &lt;Name&gt;heartbeat_in&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.HeartbeatGenerator&lt;/ClassName&gt;
+  &lt;URI&gt;hb://localhost&lt;/URI&gt;
+  &lt;LinkName&gt;root&lt;/LinkName&gt;
+  &lt;Partition&gt;0,0&lt;/Partition&gt;
+  &lt;Operation&gt;generate&lt;/Operation&gt;
+  &lt;Mode&gt;daemon&lt;/Mode&gt;
+  &lt;XAMode&gt;0&lt;/XAMode&gt;
+  &lt;TextMode&gt;1&lt;/TextMode&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Heartbeat&gt;60&lt;/Heartbeat&gt;
+  &lt;Occurrence type="ARRAY"&gt;
+    &lt;name&gt;main&lt;/name&gt;
+    &lt;Heartbeat&gt;60&lt;/Heartbeat&gt;
+  &lt;/Occurrence&gt;
+  &lt;Occurrence type="ARRAY"&gt;
+    &lt;name&gt;races&lt;/name&gt;
+    &lt;Heartbeat&gt;60&lt;/Heartbeat&gt;
+  &lt;/Occurrence&gt;
+  &lt;Occurrence type="ARRAY"&gt;
+    &lt;name&gt;state&lt;/name&gt;
+    &lt;Heartbeat&gt;120&lt;/Heartbeat&gt;
+  &lt;/Occurrence&gt;
+  &lt;Occurrence type="ARRAY"&gt;
+    &lt;name&gt;maps&lt;/name&gt;
+    &lt;Heartbeat&gt;300&lt;/Heartbeat&gt;
+  &lt;/Occurrence&gt;
+  &lt;Occurrence type="ARRAY"&gt;
+    &lt;name&gt;county&lt;/name&gt;
+    &lt;Heartbeat&gt;300&lt;/Heartbeat&gt;
+  &lt;/Occurrence&gt;
+  &lt;Occurrence type="ARRAY"&gt;
+    &lt;name&gt;xpoll&lt;/name&gt;
+    &lt;Heartbeat&gt;900&lt;/Heartbeat&gt;
+  &lt;/Occurrence&gt;
+&lt;/heartbeat_in&gt;
+</pre>
+where <b>ClassName</b> specifies what class implementing the interface of
+MessageReceiver. The XAMode is set to zero which means the node will keep
+generating messages without waiting for the previous message consumed. The
+TextMode is set to 1 which means all the messages will be TextMessage.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to generate time events according to the defined
+heartbeats. Those messages will be put into the internal queue, <b>root</b>.
+They will be picked up by the next linked node, <b>publsh_node</b>.
+</p>
+<b>2 PublishNode: publish_node</b>
+<p>
+The next node is an instance of
+<a href="../node/PublishNode.html"> PublishNode </a>, <b>publish_node</b>.
+It picks up a JMS message from the internal queue of <b>root</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected XML content,
+the XML payload will be parsed by XPath engine. The selected DOM nodes will
+be converted to an array of text. For each selected item, it will create a
+new TextMessage. The selected text will be set to the new message before it
+is routed to the outlink of <b>items</b>. Here is the configuration:
+</p>
+<pre>
+&lt;publish_node&gt;
+  &lt;Name&gt;publish_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.PublishNode&lt;/ClassName&gt;
+  &lt;Description&gt;select items from XML&lt;/Description&gt;
+  &lt;Operation&gt;publish&lt;/Operation&gt;
+  &lt;LinkName&gt;root&lt;/LinkName&gt;
+  &lt;Capacity&gt;128&lt;/Capacity&gt;
+  &lt;XAMode&gt;1&lt;/XAMode&gt;
+  &lt;MaxNumberRule&gt;4096&lt;/MaxNumberRule&gt;
+  &lt;SessionTimeout&gt;86400&lt;/SessionTimeout&gt;
+  &lt;TopicTemplate&gt;##name##&lt;/TopicTemplate&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;sub_main&lt;/Ruleset&gt;
+  &lt;Ruleset type="ARRAY"&gt;sub_races&lt;/Ruleset&gt;
+  &lt;Ruleset type="ARRAY"&gt;sub_state&lt;/Ruleset&gt;
+  &lt;Ruleset type="ARRAY"&gt;sub_county&lt;/Ruleset&gt;
+  &lt;Ruleset type="ARRAY"&gt;sub_maps&lt;/Ruleset&gt;
+  &lt;Ruleset type="ARRAY"&gt;sub_xpoll&lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;pool&lt;/Name&gt;
+    &lt;Capacity&gt;4096&lt;/Capacity&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;null&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;0,64&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;0,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;null&lt;/OutLink&gt;
+&lt;/publish_node&gt;
+</pre>
+where this node contains 5 template rules defined separately. Each template
+rule may contain a list of subscriptions sharing the same template.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to publish the incoming messages.
+</p>
+<b>3 Template Rule: sub_main</b>
+<p>
+A template rule is an instance of ConfigTemplate with a template to generate
+a group of configuration properties based on a given item list. The item list
+can be static or dynamic. PublishNode uses ConfigTemplate to manage a group of
+rulesets or subscriptions via an item list. So you do not have to define each
+ruleset one by one.
+</p>
+<p>
+Here is the configuration of <b>sub_main</b>:
+</p>
+<pre>
+&lt;sub_main&gt;
+  &lt;Name&gt;sub_main&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.om.ConfigTemplate&lt;/ClassName&gt;
+  &lt;Template&gt;##path##&lt;/Template&gt;
+  &lt;RuleType&gt;ConfigTemplate&lt;/RuleType&gt;
+  &lt;Property&gt;
+    &lt;Name&gt;sub_main&lt;/Name&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;name&gt;^main$&lt;/name&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;URITemplate&gt;##path##&lt;/URITemplate&gt;
+  &lt;/Property&gt;
+  &lt;Item type="ARRAY"&gt;/full/P.full.json&lt;/Item&gt;
+  &lt;Item type="ARRAY"&gt;/full/H.full.json&lt;/Item&gt;
+  &lt;Item type="ARRAY"&gt;/full/S.full.json&lt;/Item&gt;
+  &lt;Item type="ARRAY"&gt;/full/G.full.json&lt;/Item&gt;
+  &lt;Item type="ARRAY"&gt;/full/I.full.json&lt;/Item&gt;
+&lt;/sub_main&gt;
+</pre>
+where only the first 5 items listed. In fact, there are more than 20 items in
+the deployment.
+<p>
+Therefore, the rule of <b>sub_main</b> represents a group of subscriptions.
+All the subscription share the same topic, <b>main</b>. If the incoming message
+contains the property of name with the value of "main", <b>publish_node</b>
+will publish the copy of the message for each subscription with <b>pubURI</b>
+set to the path listed in the Item list. Those messages will be routed to the
+outlink of <b>pool</b>. The downstream node, <b>collect_node</b> will process
+them to download the json feeds.
+</p>
+<b>4 CollectNode: collect_node</b>
+<p>
+The next node is an instance of
+<a href="../node/CollectNode.html"> CollectNode </a>, <b>collect_node</b>.
+It picks up a JMS message from the internal queue of <b>pool</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected properties for a rule,
+the tasks of the rule will be executed on the message. Here is the
+configuration of the node:
+</p>
+<pre>
+&lt;collect_node&gt;
+  &lt;Name&gt;collect_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.CollectNode&lt;/ClassName&gt;
+  &lt;Description&gt;collect responses&lt;/Description&gt;
+  &lt;Operation&gt;collect&lt;/Operation&gt;
+  &lt;LinkName&gt;pool&lt;/LinkName&gt;
+  &lt;Capacity&gt;4096&lt;/Capacity&gt;
+  &lt;XAMode&gt;1&lt;/XAMode&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;download&lt;/Name&gt;
+    &lt;PreferredOutLink&gt;web&lt;/PreferredOutLink&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;pubURI&gt;^\/$&lt;/pubURI&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;FieldName&gt;pubURI&lt;/FieldName&gt;
+    &lt;Template&gt;/ELECTION/2012##pubUTI##&lt;/Template&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;collected&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;32,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;32,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;web&lt;/OutLink&gt;
+&lt;/collect_node&gt;
+</pre>
+where this node contains only one rule. The rule of download is to rewrite
+the pubURI before sending the message to the outlink of web to download the
+feeds. Once the downloaded result is collected, the node will route message to
+the outlink of collected.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to process the incoming messages.
+The process message will be routed to the outlink of <b>collected</b>.
+</p>
+<b>5 FilePersister: web_load</b>
+<p>
+<b>collect_node</b> has one persister attached for on-demand requests. That
+is an instance of
+<a href="../persister/FilePersister.html"> FilePersister </a>, <b>web_load</b>.
+It connects to a web service to download content. It also listens to the
+internal queue of <b>web</b> for requests. The incoming message is supposed to
+have the URI stored in the field of <b>pubURI</b>. The persister will retrieve
+the URI and downloads the content. Once the downloaded result is back, the
+content will be set to the message body. The message will be removed from the
+internal queue to indicate the response is ready. <b>collect_node</b> will
+monitor the message and collects the result.  Here is the configuration of this
+persister:
+</p>
+<pre>
+&lt;web_load&gt;
+  &lt;Name&gt;web_load&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.FilePersister&lt;/ClassName&gt;
+  &lt;URI&gt;http://b.data.cnn.com/&lt;/URI&gt;
+  &lt;LinkName&gt;web&lt;/LinkName&gt;
+  &lt;Operation&gt;download&lt;/Operation&gt;
+  &lt;Template&gt;##pubURI##&lt;/Template&gt;
+  &lt;DisplayMask&gt;4100&lt;/DisplayMask&gt;
+  &lt;HeaderProperty&gt;
+    &lt;Last-Modified&gt;MTime&lt;/Last-Modified&gt;
+  &lt;/HeaderProperty&gt;
+  &lt;StringProperty&gt;
+    &lt;ReturnCode/&gt;
+    &lt;TID/&gt;
+    &lt;pubURI/&gt;
+    &lt;MTime/&gt;
+  &lt;/StringProperty&gt;
+&lt;/web_load&gt;
+</pre>
+where <b>ClassName</b> specifies what class implementing the interface of
+MessagePersister. The URI specifies the transport.
+<p>
+With this configuration, QBroker as the container will instanciate the persister
+and starts a dedicated thread to connect to the data source.  In case there is
+an error on the operations, the persister will try to reconnect to the data
+source automatically.
+</p>
+<b>6 FormatNode: format_node</b>
+<p>
+The next node is an instance of
+<a href="../node/FormatNode.html"> FormatNode </a>, <b>format_node</b>.
+It picks up a JMS message from the internal queue of <b>collected</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected properties for a
+format rule, the message will be formatted according to the rule. In this use
+case, there is only one rule that sets the SQL statement and other properties.
+Here is the configuration:
+</p>
+<pre>
+&lt;format_node&gt;
+  &lt;Name&gt;format_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.FormatNode&lt;/ClassName&gt;
+  &lt;Description&gt;format a message&lt;/Description&gt;
+  &lt;Operation&gt;format&lt;/Operation&gt;
+  &lt;LinkName&gt;colleced&lt;/LinkName&gt;
+  &lt;Capacity&gt;4096&lt;/Capacity&gt;
+  &lt;DisplayMask&gt;2&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;StringProperty&gt;
+    &lt;MTime/&gt;
+    &lt;folder/&gt;
+    &lt;feed/&gt;
+  &lt;/StringProperty&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;json&lt;/Name&gt;
+    &lt;ResetOption&gt;0&lt;/ResetOption&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;MTime&gt;.&lt;/MTime&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;FormatterArgument type="ARRAY"&gt;
+      &lt;FieldName&gt;MTime&lt;/FieldName&gt;
+      &lt;Template type="ARRAY"&gt;##MTime##&lt;/Template&gt;
+      &lt;Substitution type="ARRAY"&gt;s//~=EE, d MMM yyyy HH:mm:ss zz/e&lt;/Substitution&gt;
+      &lt;Substitution type="ARRAY"&gt;s//#=yyyy-MM-dd HH:mm:ss/e&lt;/Substitution&gt;
+    &lt;/FormatterArgument&gt;
+    &lt;FormatterArgument type="ARRAY"&gt;
+      &lt;FieldName&gt;CTime&lt;/FieldName&gt;
+      &lt;Template type="ARRAY"&gt;##JMSTimestamp##&lt;/Template&gt;
+      &lt;Substitution type="ARRAY"&gt;s//#=yyyy-MM-dd HH:mm:ss/e&lt;/Substitution&gt;
+    &lt;/FormatterArgument&gt;
+    &lt;FormatterArgument type="ARRAY"&gt;
+      &lt;FieldName&gt;folder&lt;/FieldName&gt;
+      &lt;Template type="ARRAY"&gt;##pubURI##&lt;/Template&gt;
+      &lt;Substitution type="ARRAY"&gt;s/\/ELECTION\/2012[^\/]*\///&lt;/Substitution&gt;
+      &lt;Substitution type="ARRAY"&gt;s/\/[^\/]+$//&lt;/Substitution&gt;
+    &lt;/FormatterArgument&gt;
+    &lt;FormatterArgument type="ARRAY"&gt;
+      &lt;FieldName&gt;feed&lt;/FieldName&gt;
+      &lt;Template type="ARRAY"&gt;##pubURI##&lt;/Template&gt;
+      &lt;Substitution type="ARRAY"&gt;s/^[^ ]+\///&lt;/Substitution&gt;
+    &lt;/FormatterArgument&gt;
+    &lt;FormatterArgument type="ARRAY"&gt;
+      &lt;FieldName&gt;SQL&lt;/FieldName&gt;
+      &lt;Template type="ARRAY"&gt;INSERT INTO snapshots (site, folder, path, mtime, ctime, size, type, content) VALUES ('ELECTION', %%folder%%, %%feed%%, %%MTime%%, %%CTime%%, 2012, 'json', %%body%%)&lt;/Template&gt;
+    &lt;/FormatterArgument&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;pipe&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;64,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;64,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+&lt;/format_node&gt;
+</pre>
+where there is only one rule. The output message will have the content like
+the end result of the use case.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to process the incoming messages.
+The message with the SQL property will be routed to the outlink of
+<b>pipe</b> for aggregation.
+</p>
+<b>7 AggregateNode: aggregate_node</b>
+<p>
+The next node is an instance of
+<a href="../node/AggregateNode.html"> AggregateNode </a>, <b>aggregate_node</b>.
+It picks up a JMS message from the internal queue of <b>pipe</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected properties for an
+aggragation rule, the message will be aggregated according to the rule.
+The aggragation rule will generate a new message for each distinct key. Once
+the session times out, the new messages will be routed to the first outlink.
+The original messages will be routed to the 2nd outlink without any change.
+</p>
+<p>
+In this use case, the original messages will be routed to the outlink of
+<b>query</b> so that their content will be inserted to the DB. As you can see,
+there is only one rule that copies 3 properties, <b>folder, feed and CTime</b>.
+For a given key combined of folder and feed, the rule makes sure the value of
+CTime is copied from the last message. It will be used to decide the deadline
+for clean-ups in next node.  Here is the configuration:
+</p>
+<pre>
+&lt;aggregate_node&gt;
+  &lt;Name&gt;aggregate_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.AggregateNode&lt;/ClassName&gt;
+  &lt;Description&gt;aggregate messages&lt;/Description&gt;
+  &lt;Operation&gt;aggregate&lt;/Operation&gt;
+  &lt;LinkName&gt;pipe&lt;/LinkName&gt;
+  &lt;Capacity&gt;4096&lt;/Capacity&gt;
+  &lt;Heartbeat&gt;10&lt;/Heartbeat&gt;
+  &lt;SessionSize&gt;4096&lt;/SessionSize&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;rotate&lt;/Name&gt;
+    &lt;TimeToLive&gt;600&lt;/TimeToLive&gt;
+    &lt;KeyTemplate&gt;##folder##/##feed##&lt;/KeyTemplate&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;CTime&gt;.&lt;/CTime&gt;
+      &lt;folder&gt;.&lt;/floder&gt;
+      &lt;feed&gt;.&lt;/feed&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;Aggregation type="ARRAY"&gt;
+      &lt;FieldName&gt;folder&lt;/FieldName&gt;
+      &lt;Operation&gt;first&lt;/Operation&gt;
+      &lt;DefaultValue/&gt;
+    &lt;/Aggregation&gt;
+    &lt;Aggregation type="ARRAY"&gt;
+      &lt;FieldName&gt;feed&lt;/FieldName&gt;
+      &lt;Operation&gt;first&lt;/Operation&gt;
+      &lt;DefaultValue/&gt;
+    &lt;/Aggregation&gt;
+    &lt;Aggregation type="ARRAY"&gt;
+      &lt;FieldName&gt;CTime&lt;/FieldName&gt;
+      &lt;Operation&gt;last&lt;/Operation&gt;
+      &lt;DefaultValue/&gt;
+    &lt;/Aggregation&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;rotate&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;query&lt;/Name&gt;
+    &lt;Capacity&gt;4096&lt;/Capacity&gt;
+    &lt;Partition&gt;0,4000&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;96,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;96,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+&lt;/aggregate_node&gt;
+</pre>
+where there is only one rule for aggregations.
+<p>
+The original messages will be routed to the outlink of <b>query</b>. The newly
+created messages will contain the properties of <b>folder</b>, <b>feed</b> and
+<b>CTime</b>. Those messages will be routed to the outlink of <b>rotate</b>.
+</p>
+
+<b>8 FormatNode: sql_format_node</b>
+<p>
+The next node is an instance of
+<a href="../node/FormatNode.html"> FormatNode </a>, <b>sql_format_node</b>.
+It picks up a JMS message from the internal queue of <b>rotate</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected properties for a
+format rule, the message will be formatted according to the rule. In this use
+case, there is only one rule that sets the SQL statement to delete certain
+records from the DB.  Here is the configuration:
+</p>
+<pre>
+&lt;sql_format_node&gt;
+  &lt;Name&gt;sql_format_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.FormatNode&lt;/ClassName&gt;
+  &lt;Description&gt;format a message&lt;/Description&gt;
+  &lt;Operation&gt;format&lt;/Operation&gt;
+  &lt;LinkName&gt;rotate&lt;/LinkName&gt;
+  &lt;Capacity&gt;4096&lt;/Capacity&gt;
+  &lt;DisplayMask&gt;2&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;StringProperty&gt;
+    &lt;CTime/&gt;
+    &lt;folder/&gt;
+    &lt;feed/&gt;
+  &lt;/StringProperty&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;cleanup&lt;/Name&gt;
+    &lt;ResetOption&gt;0&lt;/ResetOption&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;CTime&gt;.&lt;/CTime&gt;
+      &lt;floder&gt;.&lt;/floder&gt;
+      &lt;feed&gt;.&lt;/feed&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;FormatterArgument type="ARRAY"&gt;
+      &lt;FieldName&gt;SQL&lt;/FieldName&gt;
+      &lt;Template type="ARRAY"&gt;DELETE FROM snapshots WHERE folder=%%folder%% AND path=%%feed%% AND unix_timestamp(ctime) &lt; unix_timestamp(%%CTime%%)-604800&lt;/Template&gt;
+    &lt;/FormatterArgument&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;query&lt;/Name&gt;
+    &lt;Capacity&gt;4096&lt;/Capacity&gt;
+    &lt;Partition&gt;4000,96&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;null&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;64,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;128&lt;/Capacity&gt;
+    &lt;Partition&gt;0,32&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+&lt;/sql_format_node&gt;
+</pre>
+where there is only one rule. The output message will have the property of SQL
+set.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to process the incoming messages.
+The message with the SQL property will be routed to the outlink of
+<b>query</b> for deletion.
+</p>
+
+<b>9 JDBCPersister: db_query</b>
+<p>
+Based on the use case, the downloaded content needs to be inserted to a
+database.  <a href="../persister/JDBCPersister.html"> JDBCPersister </a>,
+<b>db_query</b> is going to be used to accomplish this task.  It connects to a
+JDBC data source for inserts. It also listens to the internal queue of
+<b>query</b> for requests. The incoming message is supposed to have the SQL
+statement in the property of SQL. The persister will retrieve the SQL statement
+and prepares it. If there are any variables, <tt>%%[^%]+%%</tt>, in the
+SQL statement, the persister will replace them with <tt>?</tt> as the parameters
+before the preparement. Then it will try to set them for the execution of 
+the statement.  Here is the configuration of this persister:
+</p>
+<pre>
+&lt;db_query&gt;
+  &lt;Name&gt;db_query&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.JDBCPersister&lt;/ClassName&gt;
+  &lt;URI&gt;jdbc:mysql://347u.turner.com:3306/msgdb&lt;/URI&gt;
+  &lt;DBDriver&gt;com.mysql.jdbc.Driver&lt;/DBDriver&gt;
+  &lt;Username&gt;msgdba&lt;/Username&gt;
+  &lt;Password&gt;xxxx&lt;/Password&gt;
+  &lt;LinkName&gt;query&lt;/LinkName&gt;
+  &lt;ResultType&gt;8&lt;/ResultType&gt;
+  &lt;Operation&gt;query&lt;/Operation&gt;
+  &lt;MaxIdleTime&gt;28500&lt;/MaxIdleTime&gt;
+  &lt;DisplayMask&gt;6&lt;/DisplayMask&gt;
+  &lt;StringProperty&gt;
+    &lt;feed/&gt;
+  &lt;/StringProperty&gt;
+&lt;/db_query&gt;
+</pre>
+where <b>ClassName</b> specifies what class implementing the interface of
+MessagePersister. Thanks to JDBC standard, we just need to define the URI 
+and the DBDriver for the specific data source. The ResultType of 8 means
+the query result in JSON format. But in this case, the operation is either
+insert or delete.
+<p>
+With this configuration, QBroker as the container will instanciate the persister
+and starts a dedicated thread to connect to the DB.  In case there is an error
+on the DB operations, the persister will try to reconnect to the data source
+automatically. If the persister is idle for too long, it will hibernate to
+save the resources.
+</p>
+<b>10 Container: QBroker</b>
+<p>
+We have lefted out some of the persisters, such as <b>failure_out</b>,
+<b>nohit_out</b> and <b>null_out</b>. All of them are instances of
+<a href="../persister/LogPersister.html"> LogPersister </a>.
+If you are interested in them, you can look at them on
+<a href="http://omevent/ajax/configuration.html?view=configuration&SITE=OMEVENT&APPN=QB&service=PUB"> WebAdmin </a>.
+</p>
+<p>
+We have finally completed the implementation processes on each of the nodes.
+But it is not done yet. We still need add them to the container of QBroker.
+Think about the configurations of Apache web server. After you have completed
+the configurations for all the modules, you still need to reference them
+in the master config file, <tt>httpd.conf</tt>. Here is the master configuration
+file for QBroker_PUB:
+</p>
+<pre>
+&lt;QBroker&gt;
+  &lt;Name&gt;QBroker&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.QBroker&lt;/ClassName&gt;
+  &lt;Type&gt;QBroker&lt;/Type&gt;
+  &lt;XAMode&gt;0&lt;/XAMode&gt;
+  &lt;Capacity&gt;128&lt;/Capacity&gt;
+  &lt;Mode&gt;daemon&lt;/Mode&gt;
+  &lt;LogDir&gt;/logs/QB&lt;/LogDir&gt;
+  &lt;LogPattern&gt;.'MM'&lt;/LogPattern&gt;
+  &lt;ConfigDir&gt;/opt/qbroker/cfg/PUB&lt;/ConfigDir&gt;
+  &lt;Heartbeat&gt;30&lt;/Heartbeat&gt;
+  &lt;MaxNumberFlow&gt;1&lt;/MaxNumberFlow&gt;
+  &lt;Debug&gt;45&lt;/Debug&gt;
+  &lt;ConfigRepository&gt;repository_qb&lt;/ConfigRepository&gt;
+  &lt;IncludePolicy&gt;
+    &lt;com.cnn.pses.broker.PublishNode&gt;Ruleset&lt;/com.cnn.pses.broker.PublishNode&gt;
+  &lt;/IncludePolicy&gt;
+  &lt;AdminServer&gt;
+    &lt;ClassName&gt;com.cnn.pses.broker.ServerReceiver&lt;/ClassName&gt;
+    &lt;URI&gt;tcp://localhost:7226&lt;/URI&gt;
+    &lt;Operation&gt;respond&lt;/Operation&gt;
+    &lt;Capacity&gt;64&lt;/Capacity&gt;
+    &lt;Partition&gt;0,32&lt;/Partition&gt;
+    &lt;EOTBytes&gt;0x0a&lt;/EOTBytes&gt;
+    &lt;TextMode&gt;1&lt;/TextMode&gt;
+    &ltTemplate&gt;##body##
+&lt;/Template&gt;
+    &lt;Parser&gt;
+      &lt;ClassName&gt;com.cnn.pses.event.EventParser&lt;/ClassName&gt;
+    &lt;/Parser&gt;
+    &lt;RestartScript&gt;/bin/sh -c "/opt/qbroker/init.d/QBroker_PUB restart &amp;amp;"&lt;/RestartScript&gt;
+  &lt;/AdminServer&gt;
+  &lt;Reporter type="ARRAY"&gt;rotation_qb_out&lt;/Reporter&gt;
+  &lt;Receiver type="ARRAY"&gt;heartbeat_in&lt;/Receiver&gt;
+  &lt;Node type="ARRAY"&gt;publish_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;collect_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;format_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;agregate_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;sql_format_node&lt;/Node&gt;
+  &lt;Persister type="ARRAY"&gt;web_load&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;web_load&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;db_query&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;db_query&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;null_out&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;failure_out&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;nohit_out&lt;/Persister&gt;
+&lt;/QBroker&gt;
+</pre>
+where the plugin of AdminServer is for remote managements of the container. 
+As you may noticed, there are two instances of <b>web_load</b> and
+<b>db_query</b>. We need more threads to handle the high volumes. The
+IncludePolicy tells the container to check external rules to include for any
+instance of PublishNode. ConfigRepository defines a PropertyMonitor to watch
+the repository for on-demand reload.
+<p>
+Congratulations. We have finally completed the implementation of the use case
+for snapshots. This message flow is deployed to 347u.turner.com on election
+day. It has taken about a million of snapshots on 1000+ different feeds.
+</p>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "Name": "rrd_daily",
+  "ClassName": "org.qbroker.monitor.ScriptLauncher",
+  "Site": "DEVOPS",
+  "Type": "ScriptLauncher",
+  "Category": "RRD",
+  "Description": "generate rrd daily graphs",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "1",
+  "MaxPage": "0",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "-1",
+  "URI": "script:///bin/bash",
+  "Script": "/bin/bash -c \"/www/wdap/rrd/bin/##type##/dgraph.sh > /dev/null 2>&1\"",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

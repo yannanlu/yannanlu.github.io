@@ -1,0 +1,27 @@
+{
+  "Name": "ersr_log",
+  "ClassName": "org.qbroker.monitor.UnixlogMonitor",
+  "Site": "DEVOPS",
+  "Type": "UnixlogMonitor",
+  "Category": "LOG",
+  "Description": "service log",
+  "Step": "1",
+  "ErrorIgnored": "0",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "MaxPage": "1",
+  "QuietPeriod": "3",
+  "ExceptionTolerance": "2",
+  "URI": "log:///var/log/jboss/ersr.log",
+  "LogSize": "1",
+  "ReferenceFile": "/var/log/qbroker/.status/srer.log",
+  "TimePattern": "yyyy-MM-dd HH:mm:ss,SSS",
+  "PatternGroup": [{
+    "Pattern": ["(ERROR|FATAL)"]
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

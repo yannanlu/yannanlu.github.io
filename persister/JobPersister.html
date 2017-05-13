@@ -1,0 +1,83 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JobPersister </B> </FONT>
+</CENTER>
+
+<p>
+JobPersister listens to an XQueue and receives JMS Messages as the job
+requests. There are two types job requests. The first one is the init
+request with complete job information. The other is the request on the
+current job such as a query of the progress data or a command to abort
+the job, etc. Once the persister gets a job init message, it will initialize
+the job and starts to process it. Usually, it takes a while to process a
+job request. While the job is running, the persister is also listening to
+the XQueue for messages. The most common messages are the queries for
+progress data on the job. In this case, the persister will load the progress
+data to the message and removes it from the queue. If the request is to
+abort the running job, the persister will abort the job and resets the
+return code. The message will be removed from the queue. In case the message
+is another job init request while a job is running, the persister will just
+reset the error code on the message and removes it from the queue. Once
+the job is done, the job init message will be acknowledged and removed
+from the queue.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for JobPersister.  Most of them depends on the schemes.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+JobPersister supports only three types of file based destinations, in terms of
+the scheme such as ftp, sftp and script.  Here is the matrix of supported
+operations for various schemes:
+<TABLE border=1>
+<TR>
+<TH> Scheme </TH> <TH>Operation</TH> <TH> Description </TH>
+</TR>
+<TR>
+<TD> ftp/ftps/sftp </TD> <TD> upload </TD> <TD> upload the file to a remote server </TD>
+</TR>
+<TR>
+<TD> script </TD> <TD> test </TD> <TD> simulates a long running job via sleep for tests </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of JobPersister:
+
+<pre>
+{
+  "Name": "pstr_script",
+  "ClassName": "org.qbroker.persister.JobPersister",
+  "URI": "script://localhost",
+  "LinkName": "script",
+  "Operation": "test",
+  "ScriptField": "Duration",
+  "SessionTimeout": "300",
+  "DisplayMask": "6",
+  "StringProperty": {
+    "Duration": "",
+    "Key": ""
+  }
+}
+</pre>
+where it expects the message containing the property of Duration that specifies
+the number of seconds to sleep.
+</p>
+
+</body>
+</html>

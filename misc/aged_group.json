@@ -1,0 +1,39 @@
+{
+  "Name": "aged_group",
+  "ClassName": "org.qbroker.monitor.MultiFileMonitor",
+  "Site": "MOBILE",
+  "Type": "MultiFileMonitor",
+  "Category": "AGED",
+  "Description": "These mobile section pages can only be 10 hours old.",
+  "Step": "6",
+  "MaxRetry": "2",
+  "MaxPage": "1",
+  "QuietPeriod": "24",
+  "ExceptionTolerance": "9",
+  "URI": "ftp://fileserver/www/wdap/NOKIA/",
+  "FileName": [
+    "xhtml/en/us/i.html",
+    "hdml/en/us/main/i.hdml",
+    "newsml/xhtml/en/us/Sprint/us.main.xml",
+    "sms/en/news/topstories.xml",
+    "wml/en/us/main/i.wml",
+    "wml.ne/en/us/main/i.wml",
+    "xml/en/us/main/i.xml",
+    "SMS/EN/NEWS/TOPSTORIES.HTML",
+    "wml/en/p/a/us_main/.exclude.wml",
+    "wml.ne/en/p/a/us_main/.exclude.wml",
+    "hdml/en/p/a/us_main/.exclude.hdml",
+    "xhtml/en/p/a/us_main/.exclude.html"
+  ],
+  "User": "qbadm",
+  "Password": "xxxx",
+  "Timeout": "30",
+  "TimeZone": "GMT",
+  "TimeOffset": "600",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00",
+      "Threshold": "8:00:00,10:00:00,12:00:00"
+    }]
+  ]
+}

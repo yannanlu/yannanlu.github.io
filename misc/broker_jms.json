@@ -1,0 +1,29 @@
+{
+  "Name": "broker_jms",
+  "ClassName": "org.qbroker.jms.JMSMonitor",
+  "Site": "DEVOPS",
+  "Type": "JMSMonitor",
+  "Category": "JMS",
+  "Description": "JMS monitor",
+  "Step": "1",
+  "Tolerance": "5",
+  "MaxRetry": "1",
+  "MaxPage": "0",
+  "QuietPeriod": "6",
+  "ExceptionTolerance": "2",
+  "URI": "wmq:///##HOSTNAME##",
+  "QueueName": "JSON_IN",
+  "Operation": "Reset",
+  "StatsLog": "/var/log/qbroker/stats/broker.mq",
+  "ActionGroup": [{
+    "URI": "script://localhost",
+    "Priority": "^ERR$",
+    "Timeout": "120",
+    "Script": "/opt/qbroker/init.d/S50QFlow_JSON restart"
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

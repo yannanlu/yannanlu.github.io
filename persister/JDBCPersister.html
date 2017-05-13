@@ -1,0 +1,122 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JDBCPersister </B> </FONT>
+</CENTER>
+
+<p>
+JDBCPersister is a JMS message consumer that retrieves the SQL statement from
+the message and sends the query to a JDBC data source for query or update.
+Once the query result is returned, it will put the result into the message
+body and removes the message from the internal XQueue.  JDBCPersister supports
+all JDBC implentations via DBDriver.  There are two operations, query and
+update, supported for now.  For the query operation, the upstream node is
+supposed to pick up the query result.  For the update operation, the upstream
+node is supposed to check the return code.  It also supports flow control and
+XA.  Fault tolerance with auto reconnections is built in.
+</p>
+<p>
+In case of query with INSERT action, the persister will also check the extra
+SQL statement stored in the ExtraSQLField of the message.  If the statement is
+defined, it will be executed only if the first statement is successful.  The
+extra SQL statement can be used to get Auto-Incremental id or something else.
+The result of the extra statement will be put into the ExtraSQLField as a
+string for return.  In case of error, "ERROR: " will be prepended to the result
+string.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for JDBCPersister.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> DBDriver </TD> <TD> string </TD> <TD> mandatory </TD> <TD> full classname of JDBC driver </TD> <TD> oracle.jdbc.driver.OracleDriver </TD>
+</TR>
+<TR>
+<TD> SQLField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for SQL query statement </TD> <TD> (default: SQLField) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> ResultField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store the number of rows returned </TD> <TD> (default: SQLResult) </TD>
+</TR>
+<TR>
+<TD> ResultType </TD> <TD> integer </TD> <TD> optional </TD> <TD> type of the result </TD> <TD> 4 for XML (default: 1) </TD>
+</TR>
+<TR>
+<TD> TemplateFile </TD> <TD> string </TD> <TD> optional </TD> <TD> filename containing a template to build the SQL statement </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the SQL statement </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> ExtraSQLField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for the extra SQL statement </TD> <TD> </TD>
+</TR>
+</TABLE>
+where ResultType specifies what type of format is used for the query result.
+1 is for TEXT, 2 for BYTES, 4 for XML, 8 for JSON, 16 for List and 32 for
+ResultSet.  In the first 4 cases, the query result will be stored in the
+message body.  Otherwise, the request message is required to be
+ObjectMessage for List or Resultset.
+</p>
+
+<p>
+In case of query, the query result in JSON will look like as follows:
+<pre>
+{
+  "Record": [{
+     "column1": "value1",
+     "column2": "value2",
+     ...,
+     "columnN": "valueN"
+  },{
+     "column1": "value1",
+     "column2": "value2",
+     ...,
+     "columnN": "valueN"
+  },{
+  ...
+  },{
+     "column1": "value1",
+     "column2": "value2",
+     ...,
+     "columnN": "valueN"
+  }]
+}
+</pre>
+</p>
+
+<p>
+Here is an example of JDBCPersister:
+
+<pre>
+{
+  "Name": "pstr_db",
+  "ClassName": "org.qbroker.persister.JDBCPersister",
+  "URI": "jdbc:oracle:thin:@devdb1:5000:devdb",
+  "DBDriver": "oracle.jdbc.driver.OracleDriver",
+  "Username": "qbadm",
+  "Password": "xxxx",
+  "ResultType": "8",
+  "Operation": "query",
+  "LinkName": "query",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "DisplayMask": "6",
+  "StringProperty"{ "
+    "ReturnCode": "",
+    "SQL": ""
+  }
+}
+</pre>
+</p>
+
+</body>
+</html>

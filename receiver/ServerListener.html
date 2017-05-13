@@ -1,0 +1,66 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ServerListener </B> </FONT>
+</CENTER>
+
+<p>
+ServerListener is a JMS message producer that listens to a ServerSocket and
+accepts socket connections from it.  Once there is a new connection, it checks
+out a thread to handle the authentication on the socket.  The thread reads the
+byte stream, converts them into an ObjectEvent and invokes authentcation method
+on it.  If successful, it sends a response message back to the socket.  Before
+the thread exits, it sets the socket to the event and puts the message to the
+output XQueue.  ServerListener supports flow control and allows object control
+from its owner.  It is fault tolerant with retry and idle options.  The maximum
+number of client connections is determined by both Capacity and Partition of
+the XQueue.  Backlog is the queue length of the server socket listener.
+</p>
+<p>
+Currently, ServiceNode is the only the MessageNode that can process the messages
+from ServerListener.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for ServerListener.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Backlog </TD> <TD> integer </TD> <TD> optional </TD> <TD> length of the backlog queue </TD> <TD> 16 (default: 1) </TD>
+</TR>
+<TR>
+<TD> KeepAlive </TD> <TD> string of true or false </TD> <TD> optional </TD> <TD> keepAlive of the server socket </TD> <TD> true (default: false) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of ServerListener:
+
+<pre>
+{
+  "Name": "rcvr_listener",
+  "ClassName": "org.qbroker.receiver.ServerListener",
+  "URI": "tcp://localhost:6625",
+  "Operation": "accept",
+  "LinkName": "root",
+  "Partition": "0,0",
+  "Mode": "daemon",
+  "ReceiveTime": "30000",
+  "XAMode": "1",
+  "TextMode": "1",
+  "EOTBytes": "0x0a",
+  "DisplayMask": "0"
+}
+</pre>
+</p>
+
+</body>
+</html>

@@ -1,0 +1,228 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> CascadeNode </B> </FONT>
+</CENTER>
+
+<p>
+CascadeNode picks up a JMS messages from the input XQueue and extracts
+the group key from it. It looks up the group cache for a cached list of
+rulesets with the group key.  If the list is not empty, CascadeNode just loops
+through the list and applies each filter on the message. If a ruleset gets a
+hit, it will be used to evaluate the message. Therefore, the incoming
+message may be evaluated by multiple rulesets in the natural order.
+</p>
+<img vspace=10 halign=center src="CascadeNode.jpg" />
+<p>
+There are three fixed outlinks, done, failure and nohit. All evaluated
+message will be routed to the outlink of done. Any failure will cause
+the incoming message routed to the outlink of failure.  If there is no
+ruleset got hit, the incoming message will be routed to the outlink of nohit.
+</p>
+<p>
+CascadeNode contains a number of rulesets.  According to GroupKeyTemplate,
+each ruleset defines its own group key with a set of property patterns. The
+group key will be used to group rulesets. A ruleset may have an active time
+window for blackout.  The number of the rulesets and their content may
+change dynamically on demand.
+</p>
+<p>
+CascadeNode always creates two extra rulesets.  The first one is the nohit
+ruleset for those messages whose group key has no hit.  The second is
+the candidate ruleset for all messages whose group key has at least one hit.
+Since a candidate message may hit any number of rulesets, the stats count
+for the candidate ruleset will be the number of the incoming messages rather
+than the number of the rules.  The number of rulesets will be counted
+by their own rulesets.  The DisplayMask and StringProperty of the ruleset
+are used to display the details of cascated messages for the ruleset.
+The stats of the rules are stored in the fields of RULE_SIZE, RULE_COUNT
+and RULE_PEND.  RULE_PEND is for number of cached rulesets, RULE_SIZE for
+number of preliminary hits, whereas RULE_COUNT is for number of real hits.
+</p>
+<p>
+SessionTimeout determines how often to clean up expired group keys from the
+cache.  If SessionTimeout is larger than zero, any cached group keys will be
+expired if their idle time exceeds SessionTimeout.  Those expired group keys
+will be removed from the cache in next session to save resources.
+GroupKeyTemplate defines a template with multiple property names delimited
+by a space char. It is required for extracting group key from a message.
+</p>
+<p>
+You are free to choose any names for all three outlinks.  But CascadeNode
+always assumes the first outlink for done, the second for failure, the
+last for nohit.
+</p>
+<p>
+Apart from the common properties, there are some implementation specific
+properties for CascadeNode.
+<table border=1>
+<tr>
+<th> Property Name </th> <th>Data Type</th> <th> Requirement </th> <th> Description </th> <th> Examples </th>
+</tr>
+<tr>
+<td> GroupKeyTemplate </td> <td> string </td> <td> mandatory </td> <td> template to build the group key </td> <td> ##site## ##name## </td>
+</tr>
+<tr>
+<td> SessionTimeout </td> <td> integer </td> <td> optional </td> <td> timeout in second for a session </td> <td> 7200 (default: 86400) </td>
+</tr>
+</table>
+where SessionTimeout determines how often to clean up expired group keys from
+the cache.  If SessionTimeout is larger than zero, any cached keys will
+expired if their idle time exceeds SessionTimeout.  Those expired keys will
+be removed from the cache in the next session cleanups to save resources.
+GrooupKeyTemplate is a template with multiple property names delimited by a
+space char. It is used to extract the topic string from incoming messages.
+CascadeNode uses the group key as a unique key to look up the matched
+rulesets from the cache.
+</p>
+
+<p>
+The cascade operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of CascadeNode.
+Here are complete properties of rulesets for CascadeNode.
+
+<table border=1>
+<tr>
+<th> Property Name </th> <th>Data Type</th> <th> Requirement </th> <th> Description </th> <th> Examples </th>
+</tr>
+<tr>
+<td> Name </td> <td> alphanumeric with no spaces </td> <td> mandatory </td> <td> name of the ruleset </td> <td> event </td>
+</tr>
+<tr>
+<td> ResetOption </td> <td> integer </td> <td> optional </td> <td> option to reset properties </td> <td> 2 (default: 0) </td>
+</tr>
+<tr>
+<td> FieldName </td> <td> string </td> <td> optional </td> <td> name of the property to be parsed </td> <td> message </td>
+</tr>
+<tr>
+<td> ParserArgument </td> <td> list </td> <td> optional </td> <td> list of configurations for parser </td> <td> see example </td>
+</tr>
+<tr>
+<td> JSONFormatter </td> <td> list </td> <td> optional </td> <td> list of JSON format operations </td> <td> see example </td>
+</tr>
+<tr>
+<td> JSONPath </td> <td> object </td> <td> optional </td> <td> JSON Path </td> <td> see example </td>
+</tr>
+<tr>
+<td> FormatterArgument </td> <td> list </td> <td> optional </td> <td> list of normal format operations </td> <td> see example </td>
+</tr>
+<tr>
+<td> ActiveTime </td> <td> list </td> <td> optional </td> <td> active time window for the subscription </td> <td> see example </td>
+</tr>
+<tr>
+<td> JMSPropertyGroup </td> <td> list </td> <td> optional </td> <td> list of pattern groups on properties to select messages </td> <td> see example </td>
+</tr>
+<tr>
+<td> XJMSPropertyGroup </td> <td> list </td> <td> optional </td> <td> list of pattern groups on properties to exclude messages </td> <td> see example </td>
+</tr>
+<tr>
+<td> StringProperty </td> <td> map </td> <td> optional </td> <td> for logging of message properties </td> <td> see example </td>
+</tr>
+<tr>
+<td> DisplayMask </td> <td> integer </td> <td> optional </td> <td> mask for loggings </td> <td> 64 (default: 0) </td>
+</tr>
+</table>
+</p>
+
+<p>
+Here is an example of CascadeNode:
+
+<pre>
+{
+  "Name": "node_cascade",
+  "ClassName": "org.qbroker.node.CascadeNode",
+  "Operation": "cascade",
+  "Capacity": "1024",
+  "LinkName": "data",
+  "XAMode": "1",
+  "MaxNumberRule": "4096",
+  "SessionTimeout": "86400",
+  "GroupKeyTemplate": "##name## ##group## ##customer## ##service## ##hostname##",
+  "DisplayMask": "7",
+  "Debug": "1",
+  "Ruleset": [{
+    "Name": "parser",
+    "JMSPropertyGroup": [{
+      "name": "^syslog$",
+      "JMSType": "^\\/var\\/log$",
+      "message": " \\w+\\[\\d+\\]:"
+    }],
+    "FieldName": "message",
+    "ParserArgument": [{
+      "component": "^\\w+ \\d+ \\d+:\\d+:\\d+ \\w+ (\\w+)\\["
+    }]
+  },{
+    "Name": "component",
+    "JMSPropertyGroup": [{
+      "name": "^syslog$",
+      "JMSType": "^\\/var\\/log$",
+      "component": "."
+    }],
+    "JSONFormatter": [{
+      "JSONPath": ".new_tags",
+      "Operation": "merge",
+      "Template": "component:##component##",
+      "DataType": "string"
+    }],
+  }],
+  "OutLink": ["null", "failure", "nohit"]
+}
+</pre>
+where it builds the group key from five properties of the messages.  The node
+has two rulesets.  The first ruleset is to parse content of the property,
+<tt>message</tt>.  Then it builds the new tag and merges it to the JSON
+payload.
+</p>
+
+<p>
+CascadeNode also supports a group of rulesets based on ConfigList or
+ConfigTemplate. ConfigList manages a list of configurations stored in a
+separate repository. ConfigTemplate manages a list of configurations sharing
+a same property template. Please check EventDispatcher for the details about
+ConfigList. Here we just focus on ConfigTemplate.
+</p>
+
+<p>
+A ConfigTemplate is a Template to generate a group of configuration properties
+based on a given item list. The item list can be static or dynamic. CascadeNode
+uses ConfigTemplate to manage a group of rulesets or subscriptions via an item
+list. So you do not have to define each ruleset one by one. Here is an example:
+</p>
+<PRE>
+{
+  ...
+  "Ruleset": [{
+    "Name": "sub_main",
+    "Template": "##path##",
+    "RuleType": "ConfigTemplate",
+    "Property": {
+      "Name": "sub_main",
+      "JMSPropertyGroup": [{
+        "name": "^by2min$"
+      }],
+      "URITemplate": "##path##"
+    },
+    "Item": [
+      "/full/P.full.json",
+      "/full/H.full.json",
+      "/full/S.full.json",
+      "/full/H.keyRaces.json",
+      "/full/combined.latest.json",
+      "/flipper/P.json"
+    ]
+  }],
+  ...
+}
+</PRE>
+where <b>##path##</b> is the only variable or the place holder referenced in
+both Template and URITemplate. It will be replaced by each item of the list.
+URITemplate is used to build pubURI for the rule, whereas Template is used to
+generate the unique name of the rule. As you can see, it has a list of items
+and a template to generate rulesets. So you do not need to define the ruleset
+for each one of them.
+</body>
+</html>

@@ -1,0 +1,231 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> PublishNode </B> </FONT>
+</CENTER>
+
+<p>
+PublishNode is a message node that supports Pub/Sub on JMS messages.
+PublishNode picks up a JMS message from the input XQueue and extracts the
+topic string from it.  It looks up the topic cache for the list of subscriptions
+on the topic.  If the list is not empty, PublishNode just loops through the
+list and creates a copy of the message for each subscription. A subscription
+contains a template to build the unique URI of publications. PublishNode will
+set the URIs to the subscribed messages before flushing them downstream.
+</p>
+<img vspace=10 halign=center src="PublishNode.jpg" />
+<p>
+There are four fixed outlinks, pool, bypass, failure and nohit.  All subscribed
+copies of the incoming message will be routed to the outlink of pool.
+The original incoming message will be routed to bypass.  Any failure will
+cause the incoming message routed to the outlink of failure.  If there is
+no subscriptions for the topic, the incoming message will be routed to the
+outlink of nohit. Since there may be multiple subscriptions for an incoming
+message, please make sure the outlink of pool has the capacity no less than
+the maximum number of subscriptions.
+</p>
+<p>
+PublishNode contains a number of rulesets.  Each ruleset defines a unique
+subscription with a name, a group of property patterns, and a URI template
+for delivery.  It may also have an active time window for blackout. The number
+of the rulesets and their content may change dynamically on demand.
+</p>
+<p>
+PublishNode always creates two extra rulesets.  The first one is the nohit
+ruleset for those messages whose topic has no subscribers.  The second is
+the candidate ruleset for all messages whose topic has at least one subscriber.
+Since a candidate message may hit number of subscriptions and generates a
+copy of the message for every hit subscriptions, the stats count for the
+candidate ruleset will be the number of the incoming messages rather than
+the number of the copies.  The number of copies will be counted by their own
+rulesets.  The displaymask and stringproperty of the ruleset are used to
+display the details of dispatched messages for the ruleset.  The stats of
+the rulesets are stored in the fields of RULE_SIZE, RULE_COUNT and RULE_PEND.
+RULE_PEND is for number of cached topics, RULE_SIZE for number of preliminary
+hits, whereas RULE_COUNT is for number of real hits.
+</p>
+<p>
+SessionTimeout determines how often to clean up expired topics from the
+cache.  If SessionTimeout is larger than zero, any cached topics will be
+expired if their idle time exceeds SessionTimeout.  Those expired topics
+will be removed from the cache in next session to save resources.
+TopicTemplate defines a template with multiple property names delimited
+by a space char. It is required for extracting topic string from a message.
+URIField specifies where to store the delivery URI in the subscribed
+messages. By default, it is set to pubURI.
+</p>
+<p>
+You are free to choose any names for all four outlinks.  But PublishNode
+always assumes the first outlink for pool, the second for bypass, the third
+for failure and the last for nohit.  The names of pool has to be different
+from others.  However, the rest of the outlinks can share the same name.
+</p>
+<p>
+Apart from the common properties, there are some implementation specific
+properties for PublishNode.
+<table border=1>
+<tr>
+<th> Property Name </th> <th>Data Type</th> <th> Requirement </th> <th> Description </th> <th> Examples </th>
+</tr>
+<tr>
+<td> TopicTemplate </td> <td> string </td> <td> mandatory </td> <td> template to build the topic </td> <td> ##site## ##name## </td>
+</tr>
+<tr>
+<td> URIField </td> <td> string </td> <td> optional </td> <td> field name to store delivery URI </td> <td> pubURI </td>
+</tr>
+<tr>
+<td> SessionTimeout </td> <td> integer </td> <td> optional </td> <td> timeout in second for a session </td> <td> 7200 (default: 86400) </td>
+</tr>
+</table>
+where SessionTimeout determines how often to clean up expired topics from the
+topic cache.  If SessionTimeout is larger than zero, any cached topics will
+expired if their idle time exceeds SessionTimeout.  Those expired topics will
+be removed from the cache in the next session cleanups to save resources.
+TopicTemplate is a template with multiple property names delimited by a space
+char. It is used to extract the topic string from incoming messages. PublishNode
+uses the topic string as a unique key to look up the matched subscriptions
+from the cache.  URIField specifies where to store the delivery URI in the
+subscribed messages.
+</p>
+
+<p>
+The publish operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of PublishNode.
+In fact, each ruleset defines a subscription.
+Here are complete properties of rulesets for PublishNode.
+
+<table border=1>
+<tr>
+<th> Property Name </th> <th>Data Type</th> <th> Requirement </th> <th> Description </th> <th> Examples </th>
+</tr>
+<tr>
+<td> Name </td> <td> alphanumeric with no spaces </td> <td> mandatory </td> <td> name of the ruleset </td> <td> event </td>
+</tr>
+<tr>
+<td> URITemplate </td> <td> string </td> <td> mandatory </td> <td> template of URI for delivery </td> <td> http://##hostname## </td>
+</tr>
+<tr>
+<td> URISubstitution </td> <td> string </td> <td> optional </td> <td> text subsctitution of URI for delivery </td> <td> s/^0// </td>
+</tr>
+<tr>
+<td> ActiveTime </td> <td> list </td> <td> optional </td> <td> active time window for the subscription </td> <td> see example </td>
+</tr>
+<tr>
+<td> JMSPropertyGroup </td> <td> list </td> <td> optional </td> <td> list of pattern groups on properties to select messages </td> <td> see example </td>
+</tr>
+<tr>
+<td> XJMSPropertyGroup </td> <td> list </td> <td> optional </td> <td> list of pattern groups on properties to exclude messages </td> <td> see example </td>
+</tr>
+<tr>
+<td> StringProperty </td> <td> map </td> <td> optional </td> <td> for logging of message properties </td> <td> see example </td>
+</tr>
+<tr>
+<td> DisplayMask </td> <td> integer </td> <td> optional </td> <td> mask for loggings </td> <td> 64 (default: 0) </td>
+</tr>
+</table>
+where URITemplate is to build the URI for delivery.
+</p>
+
+<p>
+Here is an example of PublishNode:
+
+<pre>
+{
+  "Name": "node_publish",
+  "ClassName": "org.qbroker.node.PublishNode",
+  "Operation": "publish",
+  "Capacity": "1024",
+  "LinkName": "pub",
+  "XAMode": "1",
+  "MaxNumberRule": "4096",
+  "SessionTimeout": "86400",
+  "TopicTemplate": "##JMSType## ##site##",
+  "DisplayMask": "7",
+  "Debug": "1",
+  "StringProperty": {
+    "uri": "",
+    "site": ""
+  },
+  "Ruleset": [{
+    "Name": "story",
+    "JMSPropertyGroup": [{
+      "JMSType": "^www/story/"
+    }],
+    "URITemplate": "wmq://broker1/?Operation=put&QueueName=STORY"
+  },{
+    "Name": "video",
+    "JMSPropertyGroup": [{
+      "JMSType": "^www/video/"
+    }],
+    "URITemplate": "wmq://broker1/?Operation=put&QueueName=VIDEO"
+  },{
+    "Name": "keyframe",
+    "JMSPropertyGroup": "
+      "JMSType": "^www/keyframe"
+    }],
+    "URITemplate": "http://web1/rest/keyframe/?Operation=store"
+  }],
+  "OutLink": ["pool", "post", {
+    "Name": "failure",
+    "Capacity": "384",
+    "Partition": "256,64"
+  }, "post"]
+}
+</pre>
+where it builds the topic from two properties of the messages.  The node has
+three subscriptions.  The destinations of the first two are MQ queues on
+broker1.  The last destination is a web service on mam1.
+</p>
+
+<p>
+PublishNode also supports a group of rulesets or subscriptions based on
+ConfigList or ConfigTemplate. ConfigList manages a list of configurations
+stored in a separate repository. ConfigTemplate manages a list of
+configurations sharing a same property template. Please check EventDispatcher 
+for the details about ConfigList. Here we just focus on ConfigTemplate.
+</p>
+
+<p>
+A ConfigTemplate is a Template to generate a group of configuration properties
+based on a given item list. The item list can be static or dynamic. PublishNode
+uses ConfigTemplate to manage a group of rulesets or subscriptions via an item
+list. So you do not have to define each ruleset one by one. Here is an example:
+</p>
+<PRE>
+{
+  ...
+  "Ruleset": [{
+    "Name": "sub_main",
+    "Template": "##path##",
+    "RuleType": "ConfigTemplate",
+    "Property": {
+      "Name": "sub_main",
+      "JMSPropertyGroup": [{
+        "name": "^by2min$"
+      }],
+      "URITemplate": "##path##"
+    },
+    "Item": [
+      "/full/P.full.json",
+      "/full/H.full.json",
+      "/full/S.full.json",
+      "/full/H.keyRaces.json",
+      "/full/combined.latest.json",
+      "/flipper/P.json"
+    ]
+  }],
+  ...
+}
+</PRE>
+where <b>##path##</b> is the only variable or the place holder referenced in
+both Template and URITemplate. It will be replaced by each item of the list.
+URITemplate is used to build pubURI for the rule, whereas Template is used to
+generate the unique name of the rule.
+As you can see, it has a list of items and a template to generate rulesets.
+So you do not need to define the ruleset for each one of them.
+</body>
+</html>

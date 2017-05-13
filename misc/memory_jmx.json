@@ -1,0 +1,30 @@
+{
+  "Name": "memory_jmx",
+  "ClassName": "org.qbroker.monitor.NumberMonitor",
+  "Site": "DEVOPS",
+  "Type": "NumberMonitor",
+  "Category": "JMX",
+  "Description": "JMX monitor on memory",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "30",
+  "ExceptionTolerance": "-1",
+  "URI": "service:jmx:rmi:///jndi/rmi://localhost:1762/jmxrmi",
+  "Username": "admin",
+  "Password": "xxxx",
+  "MBeanName": "java.lang:type=Memory",
+  "AttributeName": "HeapMemoryUsage",
+  "Pattern": ", used=(\\d+)",
+  "Operation" : "max",
+  "WarningRange": ["(800000000,)"],
+  "ErrorRange": ["(900000000,)"],
+  "CriticalRange": ["(1000000000,)"],
+  "StatsLog": "/var/log/qbroker/stats/jmx.mem",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

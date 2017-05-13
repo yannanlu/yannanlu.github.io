@@ -1,0 +1,119 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JMSPublisher </B> </FONT>
+</CENTER>
+
+<p>
+JMSPublisher is a JMS message consumer that publishes messages to a JMS Topic.
+It receives JMS messages from the internal XQueue and delivers them to the
+topic destination.  JMSPublisher supports all JMS implentations via JNDI.  Only
+one operation, pub, is supported for now.  It also supports flow control and XA.
+Fault tolerance with auto reconnections is built in.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for JMSPublisher.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> ContextFactory </TD> <TD> string </TD> <TD> mandatory for JNDI </TD> <TD> initial context factory for JNDI service </TD> <TD> com.sun.jndi.fscontext.RefFSContextFactory </TD>
+</TR>
+<TR>
+<TD> URLPkgs </TD> <TD> string </TD> <TD> optional </TD> <TD> url pkg prefixes for JNDI </TD> <TD> org.jboss.naming </TD>
+</TR>
+<TR>
+<TD> Principal </TD> <TD> string </TD> <TD> optional </TD> <TD> security pricipal for JNDI </TD> <TD> admin </TD>
+</TR>
+<TR>
+<TD> Credentials </TD> <TD> string </TD> <TD> optional </TD> <TD> security credentials for JNDI </TD> <TD> admin </TD>
+</TR>
+<TR>
+<TD> ConnectionFactoryName </TD> <TD> string </TD> <TD> mandatory for JNDI </TD> <TD> connection factory for JNDI </TD> <TD> TestConnectionFactory </TD>
+</TR>
+<TR>
+<TD> TopicName </TD> <TD> string </TD> <TD> mandatory </TD> <TD> JMS topic </TD> <TD> topic/test </TD>
+</TR>
+<TR>
+<TD> ClientID </TD> <TD> string </TD> <TD> mandatory </TD> <TD> id for the client </TD> <TD> client1 </TD>
+</TR>
+<TR>
+<TD> Overwrite </TD> <TD> integer </TD> <TD> optional </TD> <TD> mask for overwriting JMS Properties on messages </TD> <TD> 5 (default: 0) </TD>
+</TR>
+<TR>
+<TD> Priority </TD> <TD> integer of 0-9 </TD> <TD> optional </TD> <TD> new priority to set on messages </TD> <TD> 5 (default: no change) </TD>
+</TR>
+<TR>
+<TD> Persistence </TD> <TD> integer of 1,2 </TD> <TD> optional </TD> <TD> new persistence to set on messages </TD> <TD> 2 (default: no change) </TD>
+</TR>
+<TR>
+<TD> Expiry </TD> <TD> integer </TD> <TD> optional </TD> <TD> milliseconds to add to message's expiration time </TD> <TD> 60000 (default: no change) </TD>
+</TR>
+</TABLE>
+where most of the implementation specific properties are for JNDI service.
+</p>
+
+<p>
+Beside of generic JMS implementations, there is also a dedicate implementation
+for IBM WebSphere MQ.  For IBM WebSphere MQ, here are the vendor-specific
+properties for JMSPublisher.
+
+<TABLE border=1>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> QueueManager </TD> <TD> string </TD> <TD> mandatory for binding mode </TD> <TD> name of the Queue Manager </TD> <TD> BROKER1 </TD>
+</TR>
+<TR>
+<TD> HostName </TD> <TD> string </TD> <TD> mandatory for client mode </TD> <TD> hostname </TD> <TD> broker1 </TD>
+</TR>
+<TR>
+<TD> Port </TD> <TD> integer </TD> <TD> optional </TD> <TD> port number for WMQ </TD> <TD> 1418 (default: 1414) </TD>
+</TR>
+<TR>
+<TD> ChannelName </TD> <TD> string </TD> <TD> optional </TD>
+<TD> name of the WMQ SVRCONN channel </TD> <TD> TEST (default: SYSTEM.DEF.SVRCONN) </TD>
+</TR>
+<TR>
+<TD> SecurityExit </TD> <TD> string </TD> <TD> optional </TD> <TD> classname of the securit exit </TD> <TD> org.qbroker.wmq.SimpleSecurityExit </TD>
+</TR>
+<TR>
+<TD> SecurityData </TD> <TD> string </TD> <TD> optional </TD> <TD> argument passed into the securit exit </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> BrokerVersion </TD> <TD> integer of 1 or 2</TD> <TD> optional </TD> <TD> broker version  </TD> <TD> 1 (default: 2) </TD>
+</TR>
+</TABLE>
+where SecurityExit specifies the full classname for WMQ authentications.
+</p>
+
+<p>
+Here is an example of JMSPublisher:
+
+<pre>
+{
+  "Name": "pstr_pub",
+  "ClassName": "org.qbroker.persister.JMSPublisher",
+  "URI": "wmq://panda1",
+  "TopicName": "ELEX/TEST",
+  "ClientID": "test",
+  "Operation": "pub",
+  "LinkName": "root",
+  "XAMode": "1",
+  "Persistence": "1",
+  "DisplayMask": "6",
+  "Tolerance": "0",
+  "MaxRetry": "2"
+}
+</pre>
+</p>
+
+</body>
+</html>

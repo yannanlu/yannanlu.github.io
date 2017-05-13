@@ -1,0 +1,100 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> FileReceiver </B> </FONT>
+</CENTER>
+
+<p>
+FileReceiver is a JMS message producer that monitors a file on a server,
+retrieves the file and loads the content into a JMS message.  The new JMS
+message will be put into the internal XQueue as the output.  It supports flow
+control and XA.  Fault tolerance with auto reconnections is built in.
+</p>
+<p>
+In case of the script, please make sure to redirect stderr to stdout
+or close stderr, since FileReceiver only reads from its stdout.
+</p>
+<p>
+Apart from the common properties, there is at least one implementation specific
+properties for FileReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> DependencyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of dependencis to monitor the data source </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+Other implementation specific properties depends on the schemes.
+</p>
+
+<p>
+FileReceiver supports various types of file based data sources, in terms of the
+scheme such as file, ftp, sftp, http, https, nntp or script.  Here is the
+matrix of supported operations for various schemes:
+<TABLE border=1>
+<TR>
+<TH> Scheme </TH> <TH>Operation</TH> <TH> Description </TH>
+</TR>
+<TR>
+<TD> file </TD> <TD> retrieve </TD> <TD> retrieve the content from a local file </TD>
+</TR>
+<TR>
+<TD> ftp/ftps/sftp </TD> <TD> retrieve </TD> <TD> retrieve the content from a remote file </TD>
+</TR>
+<TR>
+<TD> http/https </TD> <TD> retrieve </TD> <TD> retrieve the content from a remote web page </TD>
+</TR>
+<TR>
+<TD> nntp </TD> <TD> fetch </TD> <TD> fetch the content from a news group </TD>
+</TR>
+<TR>
+<TD> script </TD> <TD> retrieve </TD> <TD> execute the script and put the standout into message body </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of FileReceiver:
+
+<pre>
+{
+  "Name": "rcvr_file",
+  "ClassName": "org.qbroker.receiver.FileReceiver",
+  "URI": "ftp://panda/www/wdap/rrd/monitor.html",
+  "LinkName": "root",
+  "Operation": "retrieve",
+  "Mode": "daemon",
+  "TextMode": "1",
+  "XAMode": "0",
+  "Username": "qbadm",
+  "Password": "xxxx",
+  "PauseTime": "30000",
+  "StandbyTime": "60000",
+  "DisplayMask": "0",
+  "StringProperty": {
+    "FileName": "/www/wdap/rrd/monitor.html"
+  },
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "file",
+      "URI": "ftp://panda/www/wdap/rrd/monitor.html",
+      "Type": "FileMonitor",
+      "User": "qbadm",
+      "Password": "xxxx",
+      "Timeout": "30",
+      "TimeZone": "GMT"
+    }]
+  }]
+}
+</pre>
+where the receiver monitors the file on panda.  If the file is updated,
+it will retrieve the file and puts the content into the message.
+</p>
+
+</body>
+</html>

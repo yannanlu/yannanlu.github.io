@@ -1,0 +1,27 @@
+{
+  "Name": "panda_url",
+  "ClassName": "org.qbroker.monitor.URLMonitor",
+  "Site": "DEVOPS",
+  "Type": "URLMonitor",
+  "Category": "HTTP",
+  "Description": "test for Web",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "2",
+  "MaxPage": "0",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "URI": "http://panda/agent/panda/cfg/agent.json",
+  "Operation": "HEAD",
+  "EncryptedAuthorization": "b21hZG06b203Ng==",
+  "MaxBytes": "200",
+  "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+ \\w+)",
+  "DateFormat": "EE, dd MMM yyyy HH:mm:ss zz",
+  "Timeout": "60",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00",
+      "Threshold": "05:00,10:00"
+    }]
+  }
+}

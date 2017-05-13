@@ -1,0 +1,116 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> LogReceiver </B> </FONT>
+</CENTER>
+
+<p>
+LogReceiver is a JMS message producer that listens on a log file and picks up
+new log entries.  The log entries will be converted into JMS messages.  Then
+they will be put into the atached XQueue as the output.  LogReceiver requires
+the log file having a decent timestamp on each entry.  Only one operation,
+fetch, is supported. LogReceiver also supports flow control and XA.  Fault
+tolerance with auto reconnections is built in.
+</p>
+<p>
+LogReceiver supports 4 different transcation mode determined by XAMode.
+For XAMode = 1 or 3, the client based transcation is enabled so that the
+commit is done by the persister when it completes to persist the message.
+If XAMode = 2, the session commit is enabled so that the commit will be done
+when the read operation finishes and the log file is closed.  The session
+can be forced to termination if MaxNumberMessage is larger than 0 and the
+total number of processed logs and dropped logs exceeds it. For XAMode = 0,
+the auto commit is enabled.  In this case, the persistence of the state info
+is determined by SaveReference.  By default, SaveReference is set to be true.
+It means the state info will be flushed to the disk on every processed log
+entry. If SaveReference is set to false, otherwise, the state info will not
+saved to the reference file.
+</p>
+<p>
+LogReceiver is reliable and super fast. For a typical Apache log, it can
+easily pick up more than 10,000 logs per second.  When the log volume is high,
+LogReceiver may consume high CPU to catch up the log feeds. To reduce the CPU
+usage, the session commit with a reasonable MaxNumberMessage should be
+considered.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for LogReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> TimePattern </TD> <TD> string </TD> <TD> mandatory </TD> <TD> Simple Time Pattern to parse the timestamp </TD> <TD> yyyy-MM-dd HH:mm:ss,SSS </TD>
+</TR>
+<TR>
+<TD> LogSize </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of lines of a log entry </TD> <TD> 1 (default: 50) </TD>
+</TR>
+<TR>
+<TD> OldLogfile </TD> <TD> string </TD> <TD> optional </TD> <TD> filename of rotated logfile after the rotation </TD> <TD> /var/log/qbroker/my.log.1 </TD>
+</TR>
+<TR>
+<TD> ReferenceFile </TD> <TD> string </TD> <TD> mandatory </TD> <TD> filename to store the state info </TD> <TD> /var/log/qbroker/.status/event.log </TD>
+</TR>
+<TR>
+<TD> SaveReference </TD> <TD> string of true or false </TD> <TD> optional </TD> <TD> flag to save the state info to disk</TD> <TD> true (default: true) </TD>
+</TR>
+<TR>
+<TD> MaxNumberMessage </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of logs to pick up within a session </TD> <TD> 1024 (default: 0 for no limit) </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of PatternGroups to select certain logs </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of PatternGroups to exclude certain logs </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where ResultType specifies what data type is used for the query result.
+</p>
+
+<p>
+Here is an example of LogReceiver:
+
+<pre>
+{
+  "Name": "rcvr_msf_q",
+  "ClassName": "org.qbroker.receiver.LogReceiver",
+  "URI": "log:///var/log/qbroker/incoming/msf_q",
+  "LinkName": "root",
+  "OldLogfile": "/var/log/qbroker/incoming/msf_q.1",
+  "Operation": "fetch",
+  "TimePattern": "yyyy-MM-dd HH:mm:ss,SSS zz",
+  "LogSize": "1",
+  "ReferenceFile": "/var/log/qbroker/.status/msf_q",
+  "Capacity": "1024",
+  "Partition": "0,0",
+  "PatternGroup": [{
+    "Pattern": ["."]
+  }],
+  "Mode": "daemon",
+  "XAMode": "1",
+  "TextMode": "1",
+  "ReceiveTime": "1000",
+  "MaxNumberMessage": "0",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "DisplayMask": "0",
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "file_q",
+      "URI": "file:///var/log/qbroker/incoming/msf_q",
+      "Type": "FileTester"
+    }]
+  }]
+}
+</pre>
+where the receiver monitors the logfile.  If the file is there, it will run.
+Otherwise, it just waits.
+</p>
+
+</body>
+</html>

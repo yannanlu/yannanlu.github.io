@@ -1,0 +1,87 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> HeartbeatGenerator </B> </FONT>
+</CENTER>
+
+<p>
+HeartbeatGenerator is a JMS message producer that periodically generates
+messages according to the predefined occurrence policies.  It contains a list
+of Occurrence on the time sequence and name, etc.  Each outgoing message
+has the name and the time signatures.  These messages can be used to trigger
+other actions down the stream.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for HeartbeatGenerator.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> default interval in second to generate messages </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> Occurrence </TD> <TD> list </TD> <TD> mandatory </TD> <TD> list of occurrences </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where Occurrence lists all occurrences.  Here is the schema for the Occurrence:
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> string </TD> <TD> mandatory </TD> <TD> name of the occurrence </TD> <TD> 5min </TD>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in second to generate messages </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> TextMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> flag to determine message family </TD> <TD> 0 (default: 1 for TextMessage) </TD>
+</TR>
+<TR>
+<TD> OverflowOption </TD> <TD> integer </TD> <TD> optional </TD> <TD> flag for overflow option </TD> <TD> 0 (default: 1 for keep new) </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> to set properties </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> MessageBody </TD> <TD> String </TD> <TD> optional </TD> <TD> template for message body </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+</p>
+<p>
+Here is an example of HeartbeatGenerator:
+
+<pre>
+{
+  "Name": "rcvr_heartbeat",
+  "ClassName": "org.qbroker.receiver.HeartbeatGenerator",
+  "URI": "hb://localhost",
+  "LinkName": "root",
+  "Operation": "generate",
+  "Heartbeat": "60",
+  "DisplayMask": "0",
+  "Mode": "daemon",
+  "TextMode": "1",
+  "XAMode": "1",
+  "Occurrence": [{
+    "Name": "test60",
+    "Heartbeat": "60"
+  },{
+    "Name": "test90",
+    "Heartbeat": "90"
+  }]
+}
+</pre>
+where there are two groups of heartbeat.  The hearbeat of the test60 is 60 sec.
+The hearbeat of the test90 is 90 sec.
+</p>
+
+</body>
+</html>

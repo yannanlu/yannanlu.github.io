@@ -1,0 +1,37 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> MonitorPersister </B> </FONT>
+</CENTER>
+
+<p>
+MonitorPersister is a JMS message consumer that persists ObjectMessages.
+It listens to an XQueue and receives ObjectMessages from it.
+The incoming message is supposed to contain a task map.  MonitorPersister
+runs the task as a monitor and removes the message when it completes.  If there
+is an event escalated from the moniotor, the returned task will contain it with
+other updates.  So MonitorPersister is a worker executing the tasks of
+on-demand monitors.
+</p>
+
+<p>
+Here is an example of MonitorPersister:
+
+<pre>
+{
+  "Name": "pstr_mon",
+  "ClassName": "org.qbroker.persister.monitorPersister",
+  "URI": "mon://localhost",
+  "Operation": "invoke",
+  "LinkName": "pool",
+  "DisplayMask": "0"
+}
+</pre>
+</p>
+
+</body>
+</html>

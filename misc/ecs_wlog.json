@@ -1,0 +1,26 @@
+{
+  "Name": "ecs_wlog",
+  "ClassName": "org.qbroker.monitor.WinlogMonitor",
+  "Site": "DEVOPS",
+  "Type": "WinlogMonitor",
+  "Category": "VIDEO",
+  "Description": "Event log on ecs",
+  "Step": "1",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "MaxPage": "0",
+  "QuietPeriod": "12",
+  "LogSize": "1",
+  "ExceptionTolerance": "2",
+  "URI": "wlog:///application/AGILITYSDK",
+  "Script": "cmd.exe /c \"cscript c:\\home\\qbroker\\bin\\extractLog.js //Nologo -l Application -s AGILITYSDK -s MSSQLSERVER -t 2 -t 1 -a ##yyyy####MM####dd####HH####mm####ss##.##SSS## -i ##RN## 2>nul\"",
+  "ReferenceFile": "C:\\home\\qbroker\\status\\live.log",
+  "PatternGroup": [{
+    "Pattern": ["  ERROR "]
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

@@ -1,0 +1,40 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> EventPersister </B> </FONT>
+</CENTER>
+
+<p>
+EventPersister is a JMS message consumer that persists ObjectMessages. It
+listens to an XQueue and receives ObjectMessages from it.  The incoming message
+is supposed to contain a task map and an event.  EventPersister runs the task
+on the event as an EventAction and removes the message once it completes.  So
+EventPersister is a worker executing the tasks of on-demand EventActions.
+</p>
+
+<p>
+Here is an example of EventPersister:
+
+<pre>
+{
+  "Name": "pstr_pool",
+  "ClassName": "org.qbroker.persister.EventPersister",
+  "URI": "event://localhost",
+  "Operation": "invoke",
+  "LinkName": "pool",
+  "DisplayMask": "2",
+  "StringProperty": {
+    "hostname": "",
+    "name": "",
+    "priority": ""
+  }
+}
+</pre>
+</p>
+
+</body>
+</html>

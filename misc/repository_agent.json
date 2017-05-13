@@ -1,0 +1,47 @@
+{
+  "Name": "repository_agent",
+  "ClassName": "org.qbroker.monitor.PropertyMonitor",
+  "Site": "DEVOPS",
+  "Type": "PropertyMonitor",
+  "Category": "WDAP",
+  "Description": "Web JSON Configuration Repository",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "URI": "http://panda:8082/agent/panda/agent.json",
+  "EncryptedAuthorization": "b21hZG06b203Ng==",
+  "MaxBytes": "0",
+  "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+\\.\\d+ \\w+)",
+  "DateFormat": "EE, dd MMM yyyy HH:mm:ss.SSS zz",
+  "Timeout": "60",
+  "IgnoredField": ["LastModified"],
+  "Basename": "Agent",
+  "IncludeGroup": {
+    "ConfigRepository": "",
+    "MonitorGroup": ["Monitor"],
+    "MessageFlow": ["Receiver", "Node", "Persister"]
+  },
+  "PropertyFile": "/opt/qbroker/agent/Agent.json",
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "repo_agent",
+      "ClassName": "org.qbroker.monitor.URLMonitor",
+      "URI": "http://panda:8082/agent/panda/agent.json",
+      "Operation": "HEAD",
+      "EncryptedAuthorization": "b21hZG06b203Ng==",
+      "MaxBytes": "0",
+      "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+ \\w+)",
+      "DateFormat": "EE, dd MMM yyyy HH:mm:ss zz",
+      "Timeout": "60",
+      "TimeOffset": "0"
+    }]
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

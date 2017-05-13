@@ -1,0 +1,356 @@
+<html>
+<head>
+<title>JMS Providers</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JMS Providers and their Jar Files </B> </FONT> 
+</CENTER>
+<p>
+If any JMS implementation is used, QFlow also requires the providers' jar files
+and their JNDI services.  If the implementation is not pure Java, you also need
+to add their shared libraries in the library path.  All the tested JMS providers
+are listed below:
+</p>
+<p>
+<TABLE BORDER=1>
+<TR>
+<TH>Provider</TH><TH>Product</TH><TH>Required Jars</TH><TH>JNDI Example</TH>
+</TR>
+<TR>
+<TD>Common</TD>
+<TD><a HREF="http://java.sun.com/products/jms/">JMS</a></TD>
+<TD>
+  <UL>
+  <LI>jms.jar</LI>
+  <LI>jndi.jar</LI>
+  <LI>connector.jar</LI>
+  <LI>jta.jar</LI>
+  <LI>providerutil.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>PROVIDER_URL: URI</LI>
+  <LI>INITIAL_CONTEXT_FACTORY: ContextFactory</LI>
+  <LI>SECURITY_PRINCIPAL: Username</LI>
+  <LI>SECURITY_CREDENTIALS: Password</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>IBM</TD>
+<TD><a HREF="http://www.ibm.com/software/integration/wmq/">WebSphere MQ</a></TD>
+<TD>
+  <UL>
+  <LI>com.ibm.mq.jar</LI>
+  <LI>com.ibm.mqbind.jar</LI>
+  <LI>com.ibm.mqjms.jar</LI>
+  <LI>fscontext.jar</LI>
+  <LI>ldap.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: file:///opt/qbroker/jndi/wmq</LI>
+  <LI>ContextFactory: com.sun.jndi.fscontext.RefFSContextFactory</LI>
+  <LI>ConnectionFactoryName: myQCF</LI>
+  <LI>QueueName: myQueue</LI>
+  <LI>TopicName: myTopic</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>BEA</TD>
+<TD><a HREF="http://e-docs.bea.com/wli/docs70/devclient/jms.htm">WebLogic JMS</a></TD>
+<TD>
+  <UL>
+  <LI>weblogic.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: t3://panda1:7003</LI>
+  <LI>ContextFactory: weblogic.jndi.WLInitialContextFactory</LI>
+  <LI>Username: system</LI>
+  <LI>Password: xxxx</LI>
+  <LI>ConnectionFactoryName: j2eecms_i2/jms/JMSConnectionFactory</LI>
+  <LI>QueueName: j2eecms_i2/jms/NewAssetQueue</LI>
+  <LI>TopicName: j2eecms_i2/jms/NewAssetTopic</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>Sun</TD>
+<TD><a HREF="http://docs.sun.com/app/docs/coll/S1_MessageQueue_35">Message Queue</a><br><a HREF="https://mq.dev.java.net/">Open MQ</a></TD>
+<TD>
+  <UL>
+  <LI>fscontext.jar</LI>
+  <LI>ldap.jar</LI>
+  <LI>imq.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: file:///opt/qbroker/jndi/imq</LI>
+  <LI>ContextFactory: com.sun.jndi.fscontext.RefFSContextFactory</LI>
+  <LI>ConnectionFactoryName: myQCF</LI>
+  <LI>QueueName: myQueue</LI>
+  <LI>TopicName: myTopic</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>Sun</TD>
+<TD><a HREF="https://glassfish.dev.java.net/">Glassfish V2 JMS</a></TD>
+<TD>
+  <UL>
+  <LI>appserv-launch.jar</LI>
+  <LI>appserv-rt.jar</LI>
+  <LI>appserv-admin.jar</LI>
+  <LI>javaee.jar</LI>
+  <LI>imqjmsra.jar</LI>
+  <LI>imq.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: iiop://hostname:3700</LI>
+  <LI>ContextFactory: com.sun.appserv.naming.S1ASCtxFactory</LI>
+  <LI>ConnectionFactoryName: myQCF</LI>
+  <LI>QueueName: myQueue</LI>
+  <LI>TopicName: myTopic</LI>
+  </UL>
+  NB. require to set endpoints in JVM as -Dcom.sun.appserv.iiop.endpoints=hostname:3700
+</TD>
+</TR>
+<TR>
+<TD>Sun</TD>
+<TD><a HREF="https://glassfish.dev.java.net/">Glassfish V3 JMS</a></TD>
+<TD>
+  <UL>
+    <LI>annotation-framework.jar</LI>
+    <LI>appclient.security.jar</LI>
+    <LI>auto-depends.jar</LI>
+    <LI>bean-validator.jar</LI>
+    <LI>common-util.jar</LI>
+    <LI>config-api.jar</LI>
+    <LI>config-types.jar</LI>
+    <LI>config.jar</LI>
+    <LI>connectors-inbound-runtime.jar</LI>
+    <LI>connectors-internal-api.jar</LI>
+    <LI>connectors-runtime.jar</LI>
+    <LI>container-common.jar</LI>
+    <LI>deployment-common.jar</LI>
+    <LI>dol.jar</LI>
+    <LI>ejb-container.jar</LI>
+    <LI>ejb.security.jar</LI>
+    <LI>glassfish-api.jar</LI>
+    <LI>glassfish-corba-asm.jar</LI>
+    <LI>glassfish-corba-codegen.jar</LI>
+    <LI>glassfish-corba-csiv2-idl.jar</LI>
+    <LI>glassfish-corba-newtimer.jar</LI>
+    <LI>glassfish-corba-omgapi.jar</LI>
+    <LI>glassfish-corba-orb.jar</LI>
+    <LI>glassfish-corba-orbgeneric.jar</LI>
+    <LI>glassfish-ee-api.jar</LI>
+    <LI>glassfish-naming.jar</LI>
+    <LI>gmbal.jar</LI>
+    <LI>hk2-core.jar</LI>
+    <LI>imq.jar</LI>
+    <LI>imqjmsra.jar</LI>
+    <LI>imqutil.jar</LI>
+    <LI>internal-api.jar</LI>
+    <LI>javax.jms.jar</LI>
+    <LI>javax.persistence.jar</LI>
+    <LI>javax.resource.jar</LI>
+    <LI>javax.transaction.jar</LI>
+    <LI>jms-core.jar</LI>
+    <LI>jta.jar</LI>
+    <LI>jts.jar</LI>
+    <LI>kernel.jar</LI>
+    <LI>management-api.jar</LI>
+    <LI>orb-connector.jar</LI>
+    <LI>orb-iiop.jar</LI>
+    <LI>security.jar</LI>
+    <LI>tiger-types-osgi.jar</LI>
+    <LI>transaction-internal-api.jar</LI>
+    <LI>work-management.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: iiop://hostname:3700</LI>
+  <LI>ContextFactory: com.sun.enterprise.naming.SerialInitContextFactory</LI>
+  <LI>URLPkgs: com.sun.enterprise.naming</LI>
+  <LI>StateFactories: com.sun.corba.ee.impl.presentation.rmi.JNDIStateFactoryImpl</LI>
+  <LI>ConnectionFactoryName: myQCF</LI>
+  <LI>QueueName: myQueue</LI>
+  <LI>TopicName: myTopic</LI>
+  </UL>
+  NB. require Java6 and to set endpoints in JVM as -Dcom.sun.appserv.iiop.endpoints=hostname:3700
+</TD>
+</TR>
+<TR>
+<TD>Oracle</TD>
+<TD><a HREF="http://www.oracle.com/technology/products/ias/toplink/preview/10.1.3dp3/howto/eisAq/index.htm">Oracle AQ</a></TD>
+<TD>
+  <UL>
+  <LI>ldap.jar</LI>
+  <LI>aqapi.jar</LI>
+  <LI>classes12.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: ldap://ladpserver/contextName</LI>
+  <LI>ContextFactory: com.sun.jndi.ldap.LdapCtxFactory</LI>
+  <LI>ConnectionFactoryName: cn=myQCF</LI>
+  <LI>QueueName: cn=myQueue</LI>
+  <LI>TopicName: cn=myTopic</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>Oracle</TD>
+<TD><a HREF="http://www.oracle.com/technology/tech/java/oc4j/904/collateral/OC4J-FAQ-904.html">Oracle OC4J</a></TD>
+<TD>
+  <UL>
+  <LI>oc4j.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: ormi://localhost/default</LI>
+  <LI>ContextFactory: com.evermind.server.rmi.RMIInitialContextFactory</LI>
+  <LI>ConnectionFactoryName: jms/QueueConnectionFactory</LI>
+  <LI>Username: admin</LI>
+  <LI>Password: admin</LI>
+  <LI>QueueName: jms/demoQueue</LI>
+  <LI>TopicName: jms/demoTopic</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>Sonic Software</TD>
+<TD><a HREF="http://www.sonicsoftware.com/products/sonicmq">Sonic MQ</a></TD>
+<TD>
+  <UL>
+  <LI>mfcontext.jar</LI>
+  <LI>sonic_Client.jar</LI>
+  <LI>sonic_Crypto.jar</LI>
+  <LI>sonic_XA.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: tcp://localhost:2506</LI>
+  <LI>ContextFactory: com.sonicsw.jndi.mfcontext.MFContextFactory</LI>
+  <LI>ConnectionFactoryName: myQCF</LI>
+  <LI>QueueName: myQueue</LI>
+  <LI>TopicName: myTopic</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>Apache Software Fundation</TD>
+<TD><a HREF="http://activemq.apache.org">ActiveMQ</a></TD>
+<TD>
+  <UL>
+  <LI>activemq-all-5.0.0.0.jar</LI>
+  <LI>commons-logging-1.2.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: tcp://localhost:61616</LI>
+  <LI>ContextFactory: org.apache.activemq.jndi.ActiveMQInitialContextFactory</LI>
+  <LI>ConnectionFactoryName: QueueConnectionFactory</LI>
+  <LI>QueueName: myQueue</LI>
+  <LI>TopicName: myTopic</LI>
+  </UL>
+</TD>
+</TR>
+<TR>
+<TD>Apache Software Fundation</TD>
+<TD><a HREF="http://qpid.apache.org">Qpid Messaging</a></TD>
+<TD>
+  <UL>
+  <LI>qpid-client-0.16.jar</LI>
+  <LI>qpid-common-0.16.jar</LI>
+  <LI>slf4j-api-1.6.1.jar</LI>
+  <LI>slf4j-log4j12-1.6.1.jar</LI>
+  <LI>log4j-1.2.12.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: qpid:///opt/qpid/etc/qpid.properties
+  <LI>ContextFactory: org.apache.qpid.jndi.PropertiesFileInitialContextFactory
+  <LI>ConnectionFactoryName: local
+  <LI>QueueName: testQueue
+  <LI>TopicName: testTopic
+  </UL>
+  NB. require java 1.6 and to define the default logger of log4j and the following jdni property file:<br/>
+  connectionfactory.local = amqp://quest:quest@clientid/test?brokerlist='tcp://localhost:5672'<br/>
+  queue.testQueue = testQueue<br/>
+  topic.testTopic = testTopic<br/>
+</TD>
+</TR>
+<TR>
+<TD>JBoss</TD>
+<TD><a HREF="http://www.jboss.org">JBossMQ</a></TD>
+<TD>
+  <UL>
+  <LI>jbossmq-client.jar</LI>
+  <LI>jnp-client.jar</LI>
+  <LI>jboss-common-client.jar</LI>
+  <LI>jboss-system-client.jar</LI>
+  <LI>concurrent.jar</LI>
+  <LI>log4j.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: jnp://localhost:1099</LI>
+  <LI>URLPkgs: org.jboss.naming</LI>
+  <LI>ContextFactory: org.jnp.interfaces.NamingContextFactory</LI>
+  <LI>ConnectionFactoryName: ConnectionFactory</LI>
+  <LI>QueueName: queue/testQueue</LI>
+  <LI>TopicName: topic/testTopic</LI>
+  </UL>
+  NB. require to define the default logger of log4j
+</TD>
+</TR>
+<TR>
+<TD>JBoss</TD>
+<TD><a HREF="http://www.jboss.org">JBoss Messaging</a></TD>
+<TD>
+  <UL>
+  <LI>jboss-messaging-client.jar</LI>
+  <LI>jboss-remoting.jar</LI>
+  <LI>jbossall-client.jar</LI>
+  <LI>jboss-aop.jar</LI>
+  <LI>jboss-mdr.jar</LI>
+  <LI>javassist.jar</LI>
+  <LI>trvoe.jar</LI>
+  <LI>log4j.jar</LI>
+  </UL>
+</TD>
+<TD>
+  <UL>
+  <LI>URI: jnp://localhost:1099
+  <LI>URLPkgs: org.jboss.naming
+  <LI>ContextFactory: org.jnp.interfaces.NamingContextFactory
+  <LI>ConnectionFactoryName: /ConnectionFactory
+  <LI>QueueName: queue/testQueue
+  <LI>TopicName: topic/testTopic
+  </UL>
+  NB. require to define the default logger of log4j
+</TD>
+</TR>
+</TABLE>
+
+</body>
+</html>

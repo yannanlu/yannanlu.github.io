@@ -1,0 +1,63 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> LogPersister </B> </FONT>
+</CENTER>
+
+<p>
+LogPersister is a JMS message consumer that persists the content of the
+messages to a log file.  It listens to the XQueue and receives JMS Messages.
+It appends the content of the Messages to the log file. 
+LogPersister supports flow control and allows object control from its owner.
+It is fault tolerant with retry and idle options.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for LogPersister.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Retry </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of retry before to give up the delivery </TD> <TD> 2 </TD>
+</TR>
+<TR>
+<TD> FieldName </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for the full path of the logfile </TD> <TD> (default: use the logfile in uri) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the request </TD> <TD> </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of LogPersister:
+
+<pre>
+{
+  "Name": "pstr_done",
+  "ClassName": "org.qbroker.persister.LogPersister",
+  "URI": "log:///var/log/qbroker/done_out",
+  "LinkName": "done",
+  "Operation": "append",
+  "XAMode": "1",
+  "Template": "##body##\n",
+  "DisplayMask": "6",
+  "StringProperty": {
+    "AssetID": "",
+    "Type": "",
+    "status": ""
+  }
+}
+</pre>
+</p>
+
+</body>
+</html>

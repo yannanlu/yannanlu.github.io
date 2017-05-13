@@ -1,0 +1,73 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ServerReceiver </B> </FONT>
+</CENTER>
+
+<p>
+ServerReceiver is a JMS message producer that listens to a ServerSocket and
+accepts socket connections from it.  Once there is a new connection, it checks
+out a thread to handle the message I/O on the socket.  The thread reads the
+byte stream, adds them into messages and puts the messages to the output XQueue.
+ServerReceiver supports flow control and allows object control from its owner.
+It is fault tolerant with retry and idle options.  The max number of client
+connections is determined by both Capacity and Partition of the XQueue.
+Backlog is the queue length of the server socket listener.
+</p>
+<p>
+ServerReceiver supports the operations of respond and acquire.  For the 
+operation of respond, ServerReceiver is paired with the client in operation of
+request. In this case, ServerReceiver receives the message as the request.
+Then it fulfills the request and sends the response back.  For the operation of
+acquire, ServerReceiver is reading the bytes and adds the content to the
+outgoing messages. 
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for ServerReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Backlog </TD> <TD> integer </TD> <TD> optional </TD> <TD> length of the backlog queue </TD> <TD> 16 (default: 1) </TD>
+</TR>
+<TR>
+<TD> KeepAlive </TD> <TD> string of true or false </TD> <TD> optional </TD> <TD> keepAlive of the server socket </TD> <TD> true (default: false) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of ServerReceiver:
+
+<pre>
+{
+  "Name": "rcvr_admin",
+  "ClassName": "org.qbroker.receiver.ServerReceiver",
+  "URI": "tcp://localhost:6627",
+  "LinkName": "escalation",
+  "Operation": "respond",
+  "Capacity": "64",
+  "Partition": "0,32",
+  "Mode": "daemon",
+  "XAMode": "1",
+  "TextMode": "1",
+  "EOTBytes": "0x0a",
+  "DisplayMask": "0",
+  "Template": "##body##\n",
+  "Parser": {
+    "ClassName": "org.qbroker.event.EventParser"
+  }
+}
+</pre>
+where it accepts the TCP connections at the port of 6627.  The request will
+ended with the newline.  The response will be parsed by the EventParser.
+</p>
+
+</body>
+</html>

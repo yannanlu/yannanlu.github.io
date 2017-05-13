@@ -1,0 +1,33 @@
+{
+  "Name": "batchqueue_db",
+  "ClassName": "org.qbroker.monitor.LatestRecord",
+  "Site": "DEVOPS",
+  "Type": "LatestRecord",
+  "Category": "BATCHJOB",
+  "Description": "DB LatestRecord",
+  "Step": "1",
+  "Tolerance": "0",
+  "MaxRetry": "1",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "DBDriver": "COM.ibm.db2.jdbc.app.DB2Driver",
+  "URI": "jdbc:db2:MPSDB",
+  "Username": "qbadm",
+  "Password": "xxxx",
+  "SQLQuery": "SELECT CREATED_TS FROM MPSINST1.MPST_BATCH_UPDATES_QUEUE ORDER BY CREATED_TS ASC",
+  "TimePattern": "yyyy-MM-dd HH:mm:ss",
+  "IgnoreEmptyResult": "true",
+  "ActionGroup": [{
+    "URI": "script://localhost",
+    "Priority": "^ERR$",
+    "Timeout": "700",
+    "Script": "/opt/qbroker/bin/bounceDaemon.sh"
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00",
+      "Threshold": "10:00,20:00"
+    }]
+  }
+}

@@ -1,0 +1,198 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ParserNode </B> </FONT>
+</CENTER>
+
+<p>
+ParserNode parses JMS Message body and extracts properties out of it.
+According to the rulesets, it filters messages into three outlinks: done
+for all the parsed messages, nohit for those messages do not belong to any
+predefined rulesets, failure for the messages failed at the parsing process.
+Those parsed messages will have new proerties extracted from the body.
+</p>
+<img vspace=10 halign=center src="ParserNode.jpg" />
+<p>
+ParserNode contains a number of predefined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also defines the parser and
+its parsing rules for the group.  Different groups may have different
+parser or different parser parameters.  Due to JMS specifications, you
+have to clear user properties before resetting them on a readonly message.
+You can specify ResetOption in a ruleset so that the message header will be
+reset for modifications.  Its value is 0 for no reset, 1 for optional reset
+and 2 for absolute reset.  With each ruleset, you can also specify the data
+to be parsed via FiledName.  In default, the FiledName is set to "body",
+indicating to parse the message body.
+</p>
+<p>
+ParserNode also supports customized parsers via plugins.  In this case, the
+full ClassName of the parser and its ParserArgument must be well defined
+in the ruleset.  The developer of the plugin parser is supposed to document
+the details of ParserArgument.  ParserNode will load the parser and invokes
+the method to parse the message for the ruleset.
+</p>
+<p>
+ParserNode always adds an extra ruleset for the nohit messages.  This nohit
+ruleset is always the first ruleset with the id of 0.  On the node level,
+DisplayMask and StringProperty control the display result of outgoing messages.
+</p>
+<p>
+You are free to choose any names for the three fixed outlinks.  But ParserNode
+always assumes the first outlink for done, the second for failure and the last
+for nohit.
+</p>
+
+<p>
+The parse operation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of ParserNode.
+Here are complete properties of rulesets for ParserNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> optional </TD>
+<TD> full classname of the plugin parser </TD> <TD> com.cnn.pses.common.Simpleparser </TD>
+</TR>
+<TR>
+<TD> ResetOption </TD> <TD> integer </TD> <TD> optional </TD> <TD> option to reset properties </TD> <TD> 2 (default: 0) </TD>
+</TR>
+<TR>
+<TD> KeepBody </TD> <TD> string of true or false </TD> <TD> optional </TD> <TD> flag to keep body after the parse operation </TD> <TD> true (default: false) </TD>
+</TR>
+<TR>
+<TD> FieldName </TD> <TD> string </TD> <TD> optional </TD> <TD> name of a property to parse </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> MapKey </TD> <TD> string </TD> <TD> optional </TD> <TD> key name of a MapMessage to parse </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> ParserArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of configurations for parser </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where MapKey specifies which key is used to extract text to parse for
+MapMessages only.  PreferredOutLink can only be defined for bypass rulesets.
+In this case, the messages of the group will not be parsed.  Here is an example
+for the bypass ruleset:
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it routes the messages to the outlink of BYPASS.
+</p>
+<p>
+Here is an example of the parser ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "data",
+    "ClassName": "org.qbroker.common.SimpleParser",
+    "ResetOption": "2",
+    "MapKey": "Data",
+    "JMSPropertyGroup": [{
+      "context": "^data$"
+    }],
+    "ParserArgument": [{
+      "CommandType": "^.* CommandType: ([^ ]+)"
+    },{
+      "AssetID": " AssetID: ([0-9]+)"
+    }]
+  }],
+  ...
+}
+</pre>
+where it uses SimpleParser to parse the text stored in the Data field of the
+message's map.  SimpleParser applies Perl5 Pattern match on the text.  It
+requires a list of ParserArgument to be instanciated.  The list is supposed
+to list all the names of properties to parsed from the text in the sequential
+order.  As you can see in the example above, two properties, CommandType and
+AssetID, are parsed out from the text.  Upon success, the message will have
+those two properties set with the values from the map.  The parenthese defines
+what portion of the text will be the value for the property.
+</p>
+
+<p>
+Here is an example of ParserNode:
+<pre>
+{
+  "Name": "node_parser",
+  "ClassName": "org.qbroker.node.ParserNode",
+  "Operation": "parse",
+  "LinkName": "root",
+  "Capacity": "6",
+  "WaitTime": "50",
+  "DisplayMask": "0",
+  "Ruleset": [{
+    "Name": "score",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }],
+    "ClassName": "org.qbroker.common.SimpleParser",
+    "ParserArgument": [{
+      "CollectTime": "^(\\d\\d\\d\\d-\\d+-\\d+ \\d+:\\d+:\\d+,\\d\\d\\d \\w+)"
+    },{
+      "IP": " (\\d+\\.\\d+\\.\\d+\\.\\d+)"
+    },{
+      "Hostname": " ([^ ]+)"
+    },{
+      "Username": " ([^ ]+)"
+    },{
+      "JMSType": " ([^ ]+)"
+    },{
+      "GameID": " ([^ ]+)"
+    },{
+      "body": " (.*)$"
+    }]
+  },{
+    "Name": "event",
+    "JMSPropertyGroup": [{
+      "JMSType": "^event$"
+    }],
+    "ClassName": "org.qbroker.event.EventParser"
+  }],
+  "OutLink": ["parsed", "failure", "nohit"]
+}
+</pre>
+where there are two rulesets.  The second rule is using a different plugin
+without any ParserArgument.
+</p>
+
+</body>
+</html>

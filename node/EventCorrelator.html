@@ -1,0 +1,234 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> EventCorrelator </B> </FONT>
+</CENTER>
+
+<p>
+EventCorrelator is a message node that maintains a session for correlations.
+EventCorrelator converts incoming JMS messages into JMSEvents and correlates
+them according to their content and the predefined rulesets.  All the events
+are correlated into non-overlapping groups.  EventCorrelator then creates a
+summary event for each of the groups.  As the result, EventCorrelator routes
+all the events into four outlinks: done for the summary events created in
+the correlations, nohit for those events do not belong to any rulesets,
+failure for the events failed in the correlation process and bypass for those
+events participated in correlations.  Since EventCorrelator does not consume
+any events, any in-coming events has to find a way out via one of the four
+outlinks.
+</p>
+<img vspace=10 halign=center src="EventCorrelator.jpg" />
+<p>
+EventCorrelator contains a number of predefined rulesets.  These rulesets
+are used to categorize events into groups.  Each rule defines an EventFilter
+for selecting events and an EventMerger for building a summary event on the
+group.  An event may belong to multiple groups.  The correlation process will
+decide its final ownership based on the size of the groups.  The group with
+the largest size will own all the events in the group exclusively.  In case
+there is a tie between two groups, the group with the lowest rule ID will be
+the winner.  Therefore each ruleset defines a unique event group.  The ruleset
+also defines a summary list for the merger to create a new event and to attach
+the summary of all the events in the group.
+</p>
+<p>
+EventCorrelator always creates two extra rulesets.   The first one is nohit
+ruleset for those events not hitting any patterns.  The other is candidate
+ruleset for all incoming events hitting at least one patterns.  Since there
+is no way to figure out the final groupships of candidate events before the
+correlation, they will be put into candidate group for tracking.  Please
+remember, candidate events may not necessarily contribute to any summary
+events.  The summary events will be counted by their own rulesets.  Their
+property displaying and resetting are mutual-exclusively determined by the
+DisplayMask and StringProperty of their own rulesets.  If DisplayMask
+is not defined in a rule or it is set to 0 or -1 (default), its
+StringProperty will be used to reset the string properties on the summary
+events.  Otherwise, its StringProperty will only be used to display the
+details of summary events.  On the node level, DisplayMask and StringProperty
+control the displaying result of all candidate events.  If the DisplayMask
+of a ruleset is set to -1, that rule will inherit the DisplayMask and the
+StringProperty from the node for display control on the rule level.
+</p>
+<p>
+It is OK to have a bypass ruleset without any EventMerger.  Any ruleset
+with PreferredOutLink defined is called bypass ruleset.  If a bypass ruleset
+matches an event,  the event will be routed to the specified outlink directly,
+bypassing rest of the correlation process.  It is acting like a jump out of
+the loop.
+</p>
+<p>
+You are free to choose any names for the four fixed outlinks.  But
+EventCorrelator always assumes the first outlink for done, the second for
+bypass group, the third for failure and the last for nohit.  Any two or more
+outlinks can share the same outlink name.  It means these outlinks are sharing
+the same output channel.
+</p>
+<p>
+Apart from the common properties, there is three implementation specific
+properties for EventCorrelator.
+<table border=1>
+<tr>
+<th> Property Name </th> <th>Data Type</th> <th> Requirement </th> <th> Description </th> <th> Examples </th>
+</tr>
+<tr>
+<td> Heartbeat </td> <td> integer </td> <td> optional </td> <td> timeout in second for a session </td> <td> 7200 (default: 86400) </td>
+</tr>
+<tr>
+<td> SessionTimeout </td> <td> integer </td> <td> optional </td> <td> timeout in second for a session </td> <td> 7200 (default: 86400) </td>
+</tr>
+<tr>
+<td> SessionSize </td> <td> integer </td> <td> optional </td> <td> timeout in second for a session </td> <td> 7200 (default: 86400) </td>
+</tr>
+</table>
+where SessionTimeout determines how often to clean up expired topics from the
+topic cache.  If SessionTimeout is larger than zero, any cached topics will
+expire if their idle time exceeds SessionTimeout.  Those expired topics will be
+removed from the topic cache in the next session cleanups to save resources.
+</p>
+
+<p>
+The correlation operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of
+EventCorrelator.  Here are complete properties of rulesets for the node of
+EventCorrelator.
+
+<table border=1>
+<tr>
+<th> Property Name </th> <th>Data Type</th> <th> Requirement </th> <th> Description </th> <th> Examples </th>
+</tr>
+<tr>
+<td> Name </td> <td> alphanumeric with no spaces </td> <td> mandatory </td> <td> name of the ruleset </td> <td> event </td>
+</tr>
+<tr>
+<td> Type </td> <td> string </td> <td> mandatory </td> <td> type of the merger </td> <td> MessageSummary </td>
+</tr>
+<tr>
+<td> ClassName </td> <td> string </td> <td> mandatory </td> <td> full class name of implementation for EventMerger </td> <td> org.qbroker.node.EventSummary </td>
+</tr>
+<tr>
+<td> MinimumEventCount </td> <td> integer </td> <td> mandatory </td> <td> minimum number of the events </td> <td> 2 </td>
+</tr>
+<tr>
+<td> SummaryTemplate </td> <td> string </td> <td> mandatory </td> <td> template to build the summary </td> <td> see example </td>
+</tr>
+<tr>
+<td> SummarySubstitution </td> <td> string </td> <td> optional </td> <td> text substitution for the summary </td> <td> see example </td>
+</tr>
+<tr>
+<td> SummaryHeader </td> <td> string </td> <td> optional </td> <td> header for the summary </td> <td> see example </td>
+</tr>
+<tr>
+<td> SummaryFooter </td> <td> string </td> <td> optional </td> <td> footer for the summary </td> <td> see example </td>
+</tr>
+<tr>
+<td> SummaryDefault </td> <td> string </td> <td> optional </td> <td> default value for the summary </td> <td> see example </td>
+</tr>
+<tr>
+<td> Aggregation </td> <td> list </td> <td> optional </td> <td> a list of aggregate operations </td> <td> see example </td>
+</tr>
+<tr>
+<td> PreferredOutLink </td> <td> alphanumeric with no spaces </td> <td> mandatory for bypass only </td> <td> name of the preferred outlink </td> <td> bypass </td>
+</tr>
+<tr>
+<td> EventPattern </td> <td> list </td> <td> optional </td> <td> list of patterns to select events </td> <td> see example </td>
+</tr>
+<tr>
+<td> XEventPattern </td> <td> list </td> <td> optional </td> <td> list of patterns to exclude events </td> <td> see example </td>
+</tr>
+<tr>
+<td> StringProperty </td> <td> map </td> <td> optional </td> <td> for displaying or resetting properties on the events </td> <td> see example </td>
+</tr>
+<tr>
+<td> DisplayMask </td> <td> integer </td> <td> optional </td> <td> mask for loggings </td> <td> 64 (default: -1) </td>
+</tr>
+</table>
+where EventPattern selects the events based on their content.  Aggregation
+lists all the aggregate operations on the events.  Here is an example of
+Aggregation:
+<pre>
+{
+    ...
+    "Aggregation": [{
+      "FieldName": "body",
+      "Operation": "append",
+      "DefaultValue": ""
+    }],
+    ...
+}
+</pre>
+</p>
+
+<p>
+Currently, there is only one implementation of EventMerger, EventSummary.
+Each implementation will have its own configuration parameters.
+Here is an example of a ruleset for MessageSummary:
+<pre>
+{
+  "Name": "rule_all_mps",
+  "ClassName": "org.qbroker.event.EventSummary",
+  "Site": "MIRA",
+  "Type": "MessageSummary",
+  "Category": "MPS",
+  "Description": "event correlations for all MIRA alerts",
+  "MinimumEventCount": "1",
+  "SummaryHeader": "Date  Priority  Name  Status  Hostname  Text\n",
+  "SummaryTemplate": "##date## ##priority## ##name## ##status## ##hostname## ##text##\n",
+  "EventPattern": [{
+    "priority": "^CRIT$",
+    "site": "^MIRA$",
+    "hostname": "^mira(app|web)4prod[12]"
+  }],
+  "XEventPattern": [{
+    "status": "^[eE]xception$"
+  }]
+}
+</pre>
+where this rule is of MessageSummary for all events from MIRA.
+</p>
+
+<p>
+Here is an example of EventCorrelator:
+
+<pre>
+{
+  "Name": "node_correlation",
+  "ClassName": "org.qbroker.node.EventCorrelator",
+  "URI": "event://localhost",
+  "Operation": "correlate",
+  "Capacity": "1024",
+  "LinkName": "bymin",
+  "Heartbeat": "30",
+  "SessionSize": "100",
+  "SessionTimeout": "120",
+  "XAMode": "1",
+  "DisplayMask": "6",
+  "Debug": "1",
+  "StringProperty": {
+    "priority": "",
+    "name": "",
+    "hostname": "",
+    "site": "",
+    "category": ""
+  },
+  "Ruleset": [{
+    "Name": "shortcut",
+    "PreferredOutLink": "action",
+    "EventPattern": [{
+      "priority": "^DEBUG$"
+    }],
+  }, "all_ardendo", "all_mps", "all_dam_log", "reset_ardendo"]
+  "OutLink": [{
+    "Name": "action",
+    "Capacity": "1024",
+    "Partition": "0,768"
+  }, "action", "action", "action"]
+}
+</pre>
+where the first rule is for bypass.  The rest of them are defined externally.
+</p>
+
+</body>
+</html>

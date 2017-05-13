@@ -1,0 +1,24 @@
+{
+  "Name": "queue_sonic",
+  "ClassName": "org.qbroker.sonicmq.SonicMQMonitor",
+  "Site": "DEVOPS",
+  "Type": "SonicMQMonitor",
+  "Category": "SMQ",
+  "Description": "JMS/JMX monitor on a queue",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "1",
+  "MaxPage": "1",
+  "QuietPeriod": "30",
+  "ExceptionTolerance": "-1",
+  "URI": "tcp://localhost:2506",
+  "Username": "qbadm",
+  "Password": "xxxx",
+  "ObjectName": "Domain1.brQA01Container:ID=brQA01,category=metric,type=queue,name=EventQueue",
+  "StatsLog": "/var/log/qbroker/stats/EventQueue.mq",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

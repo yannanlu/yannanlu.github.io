@@ -1,0 +1,25 @@
+{
+  "Name": "was_web",
+  "ClassName": "org.qbroker.monitor.WebOperator",
+  "Site": "DEVOPS",
+  "Type": "WebOperator",
+  "Category": "WAS",
+  "Description": "check WAS web server login page",
+  "Step": "1",
+  "Tolerance": "0",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "Timeout": "60",
+  "IsMultipart": "false",
+  "MaxBytes": "10240",
+  "URI": "http://localhost/WAS/index.html",
+  "Pattern": "Production WAS",
+  "StatsLog": "/var/log/qbroker/stats/was_web.log",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "03:00:00-02:30:00"
+    }]
+  }
+}

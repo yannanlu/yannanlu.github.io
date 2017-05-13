@@ -1,0 +1,67 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ServerPersister </B> </FONT>
+</CENTER>
+
+<p>
+ServerPersister is a JMS message consumer that listens to a ServerSocket and
+accepts socket connections from it.  Once there is a new connection, it checks
+out a thread to handle the message I/O on the socket. The thread keeps
+getting JMS messages from the input XQueue and writes their content
+to the socket.  Currently, it supports two operations, provide and publish.
+In case of the provide operation, ServerPersister allows multiple client
+threads to pick up messages from the same XQueue.  ServerPersister supports
+flow control and allows object control from its owner.  It is fault tolerant
+with retry and idle options.  In case of the publish operation, however,
+ServerPersister allows multiple subscribers to pick up messages published
+from the same XQueue and each client gets its own copies.  In this case,
+there is no flow control and buffer overrun may occur.  Therefore,
+ServerPersister is a JMS message outlet, or a JMS message provider.
+The max number of client connections is determined by both Capacity and
+Partition of the XQueue.  Backlog is the queue length of the server socket
+listener.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for ServerPersister.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Backlog </TD> <TD> integer </TD> <TD> optional </TD> <TD> length of the backlog queue </TD> <TD> 16 (default: 1) </TD>
+</TR>
+<TR>
+<TD> KeepAlive </TD> <TD> string of true or false </TD> <TD> optional </TD> <TD> keepAlive of the server socket </TD> <TD> true (default: false) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of ServerPersister:
+
+<pre>
+{
+  "Name": "pstr_pub",
+  "ClassName": "org.qbroker.persister.ServerPersister",
+  "URI": "tcp://localhost:6555",
+  "LinkName": "done",
+  "Capacity": "1024",
+  "SOTimeout": "2",
+  "Operation": "publish",
+  "XAMode": "0",
+  "DisplayMask": "4",
+  "MaxRetry": "5",
+  "MaxConnection": "256",
+  "PauseTime": "1000"
+}
+</pre>
+</p>
+
+</body>
+</html>

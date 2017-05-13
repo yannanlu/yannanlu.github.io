@@ -1,0 +1,271 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> MessageEvaluator </B> </FONT>
+</CENTER>
+
+<p>
+MessageEvaluator is a JMS message consumer that evaluates messages according
+to the pre-defined rulesets.  The incoming messages are supposed to specify
+what rule to be invoked for the evaluation.  The evaluation consists two
+separate steps.  The first one is the pattern match on the content.  The second
+is the transformation on the content.  If the pattern match returns true, the
+message will be transformed according to the ruleset and its return code will
+be reset to 0 for SUCCESS.  Otherwise, MessageEvaluator will only reset its
+return code to 1 for FAILURE.  If the evaluation process fails, the return
+code will be reset to -1 for EXCEPTION.  MessageEvaluator will not commit any
+message.  It just bounces it back by removing it from the input XQueue.
+</p>
+<p>
+MessageEvaluator contains a number of predefined rulesets.  Each ruleset
+has its own unique name and the evaluation rules.  It may also contain the
+formatting rules or plugins for modifying the content of the messages.
+There are many built-in transformation supports.  The default one is the
+simple Templates and TextSubstitutions. Others are simple template files, XSLT
+templates, XPath evaluations, JSONT templates, and JSONPath evaluations, etc.
+MessageEvaluator supports branch ruleset to invoke the certain ruleset
+according to the pattern match.  It also supports loop ruleset to invoke
+multiple rulesets on the same message.  Each ruleset can define its own
+DisplayMask for logings.
+</p>
+<p>
+For the default formatting support, the ruleset is supposed to have a list
+of FormatterArgument.  A FormatterArgument contains a name specifying
+what to be formatted and two sets of format operations.  The first oeration
+set lists format templates in the name of Template.  The other is the list
+of substitutions with the name of Substitution.  Each Template appends the
+previous non-empty text to the variable and sets the next initial text for
+its corresponding Substitutions.  If the first template is null, the initial
+text will be the variable itself.  Each Substitution modifies the text
+before it is appended to the variable.  The associations between the
+Templates and Substitutions are based on their positions.  Either Template
+or Substitution can be null for no action and a place holder.  Therefore,
+you can insert multiple null Templates so that the associated Substitutions
+will be able to modify the same text in turns.  MessageEvaluator will apply
+all the operations of FormatterArguments on each SUCCESS message in the
+order of the list.  If any of the operations fails, the message will be
+marked as EXCEPTION.
+</p>
+<p>
+Besides FormatterArgument, MessageEvaluator also allows to have a simple
+template file defined in the name of TemplateFile for a ruleset. In this
+case, MessageEvaluator will load the template file at the start up and
+stores it into the cache. It will be used to format the message body at the
+end of the format process. If NeedChop is defined with the value of "true",
+MessageEvaluator will try to chop the newline from the loaded content.
+</p>
+<p>
+For XSLT support, the ruleset must not have any FormatterArgument defined.
+Instead, the full path of the XSL template file must be specified in the name
+of XSLFile.  If there is any parameters to be set, they should be defined in
+the map of XSLParameter.  MessageEvaluator will load the XSL template file,
+compiles it at the startup and stores it to cache.  The parameters will be set
+dynamically in case there is any reference on the data of the incoming message.
+</p>
+<p>
+MessageEvaluator also supports XPath operatons, such as xmerge and xcut.
+XMerge is to merge an XML content stored in XMLField into the XML payload
+of the message. The ruleset should define SourceXPath and TargetXPath.
+Currently, only append is supported. XCut is to remove the object at a given
+XPath expression.
+</p>
+<p>
+For JSONT support, the ruleset must not have any FormatterArgument defined.
+Instead, the full path of the JSONT template file must be specified in the name
+of JTMPFile.  If there is any parameters to be set, they should be defined in
+the map of JSONParameter.  MessageEvaluator will load the JSONT template file,
+compiles it at the startup and stores it to cache.  The parameters will be set
+dynamically in case there is any reference on the data of the incoming message.
+</p>
+<p>
+MessageEvaluator also supports JSONPath operatons, such as jmerge and jcut.
+JMerge is to merge a JSON content stored in JSONField into the JSON payload
+of the message. The ruleset should define SourceJSONPath and TargetJSONPath.
+Currently, both append and union are supported. JCut is to remove the object
+at a given JSONPath.
+</p>
+<p>
+For branch support, the ruleset can reference other existing format rulesets
+via the list of Branch.  MessageEvaluator will match message to the patterns
+of each ruleset in the order to find the first hit.  Then it applies the very
+ruleset on the message breaks the branch.  It allows you to invoke ruleset
+according to the content of the message.
+</p>
+<p>
+For loop support, the ruleset can reference other existing format rulesets
+via the list of Loop.  MessageEvaluator will match message to the patterns
+of each ruleset and applies the formatter to the message if it is a hit.  The
+operation continues until the loop ends.  It allows you to invoke a series of
+rulesets according to the content of the message.
+</p>
+<p>
+For time window support, the ruleset can evalute the age of the message.
+It requires ActiveTime, KeyTemplate and TimePattern to be defined in the
+ruleset.  If it is for age, please make sure the threshold contains at
+lease two numbers.  For occurrence, please make sure it contains only
+one negative number.
+</p>
+<p>
+For static caching support, the ruleset must have StaticCache defined as
+a map with key-value pairs. Optionally, ResultField, KeyTemplate and
+KeySubstitution can be defined also. ResultField specifies where to store
+the cache result. By default, it is stored to message body. KeyTemplate
+and KeySubstitution are used to retrieve the cache key. By default,
+KeyTemplate is "##body##".
+</p>
+<p>
+MessageEvaluator also supports customized formatters via plugins. In this case,
+the full ClassName of the plugin and its FormatterArgument must be well defined
+in the ruleset.  The developer of the plugin formatter is supposed to document
+the details of FormatterArgument.  MessageEvaluator will load the plugin and
+invokes the method to format the messages of the ruleset.
+</p>
+<p>
+Besides format rulesets, MessageEvaluator also supports rulesets of parsers,
+such as SimpleParser or XPath. For SimpleParser, ParserArgument has to be
+well defined.  For XPath, XPathExpression has to be well defined.
+MessageEvaluator will parse the message and sets the paramters as specified
+by the ruleset.
+</p>
+<p>
+MessageEvaluator always copies the original value of RCField to the
+OriginalRCField before resetting it.  If you want to evaluate the value of
+the property in RCField, please ensure to reference the OriginalRCField in
+your pattern group.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for MessageEvaluator.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> FieldName </TD> <TD> string </TD> <TD> optional </TD> <TD> field name stored the name of the rule </TD> <TD> (default: RuleName) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> OriginalRC </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store the original return code </TD> <TD> (default: OriginalRC) </TD>
+</TR>
+<TR>
+<TD> MaxNumberRule </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of rules </TD> <TD> 32 (default: 128) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+The operation is executed via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of MessageEvaluator.
+Here are common properties of rulesets for MessageEvaluator.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages, or logging </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> the mask controls what to log on the processed messages for the ruleset </TD> <TD> 6 (default: 0) </TD>
+</TR>
+</TABLE>
+where JMSPropertyGroup and PatternGroup are used as filters. If the incoming
+message failed to be selected, MessageEvaluator will set the return code to
+EXEPTION. DisplayMask overrides the persister level mask for logging.
+
+<p>
+Here is an example of MessageEvaluator:
+
+<pre>
+{
+  "Name": "pstr_eval",
+  "ClassName": "org.qbroker.persister.MessageEvaluator",
+  "Description": "test",
+  "URI": "eval://",
+  "Operation": "evaluate",
+  "LinkName": "eval",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "Ruleset": {
+    "zero": {
+      "JMSPropertyGroup": [{
+        "OriginalRC": "^0$"
+      }],
+      "PatternGroup": [{
+        "Pattern": [">0<"]
+      }],
+      "StringProperty": {
+        "OriginalRC": "",
+        "ReturnCode": "",
+        "TID": ""
+      }
+    },
+    "nonzero": {
+      "JMSPropertyGroup": [{
+        "OriginalRC": "^0$"
+      }],
+      "PatternGroup": [{
+        "Pattern": [">[1-9]"]
+      }],
+      "StringProperty": {
+        "OriginalRC": "",
+        "ReturnCode": "",
+        "TID": ""
+      }
+    },
+    "ignore_rc": {
+      "JMSPropertyGroup": [{
+        "OriginalRC": "^[01]$"
+      }],
+      "StringProperty": {
+        "OriginalRC": "",
+        "ReturnCode": "",
+        "AssetID": "",
+        "TID": ""
+      }
+    },
+    "perm_count": {
+      "JMSPropertyGroup": [{
+        "OriginalRC": "^0$"
+      }],
+      "PatternGroup": [{
+        "Pattern": ">[1-9]"
+      }],
+      "DisplayMask": "6",
+      "StringProperty": {
+        "OriginalRC": "",
+        "ReturnCode": "",
+        "login": "",
+        "TID": ""
+      }
+    },
+    "trace": {
+      "JMSPropertyGroup": [{
+        "OriginalRC": "^0$"
+      },
+      "DisplayMask": "71"
+    }
+  }
+}
+</pre>
+</p>
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "Name": "queue_jmx",
+  "ClassName": "org.qbroker.monitor.JMXQMonitor",
+  "Site": "DEVOPS",
+  "Type": "JMXQMonitor",
+  "Category": "AMQ",
+  "Description": "JMX monitor on ##queue##",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "30",
+  "ExceptionTolerance": "-1",
+  "URI": "service:jmx:rmi:///jndi/rmi://localhost:8999/jmxrmi",
+  "Username": "admin",
+  "Password": "xxxx",
+  "MBeanName": "org.apache.activemq:BrokerName=localhost,Type=Queue,Destination=##queue##",
+  "StatsLog": "/var/log/qbroker/stats/##queue##.mq",
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

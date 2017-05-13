@@ -1,0 +1,773 @@
+<html>
+<head>
+<title>Flow</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> QBroker_XML Message Flow </B> </FONT> 
+</CENTER>
+<a NAME="Overview"></a>
+<h2> Overview </h2>
+<p>
+QBroker is actually a JMS application container.  It hosts multiple JMS
+applications in terms of message flows. A generic message flow contains 3 types
+of nodes, MessageReceiver, MessagePersister and MessageNode. MessageReceiver
+and MessagePersister are for message I/O. MessageNode is for message processing.
+A message flow should have minimum two nodes, a MessageReceiver for picking up
+messages and a MessagePersister to deliver the messages. All the nodes should
+be linked to at least another node so that the messages can flow from one node
+to another. With all nodes linked together, a message flow will process
+messages just like a production pipeline.
+</p>
+<p>
+QBroker_XML is an implementation of QBroker message flow on
+<a HREF="http://docs.turner.com/display/~sdengler/Fluid+POC+Use+Case">
+Fluid POC Use Case</a> proposed by Sam Dengler. Here we are going to
+cover the details from the Use Case to Design and Implementation.
+</p>
+
+<UL>
+<LI> <a HREF="#Overview"> Overview </a></LI>
+<LI> <a HREF="#UseCase"> Use Case </a></LI>
+<LI> <a HREF="#Design"> High Level Design </a></LI>
+<LI> <a HREF="#Implementation"> Implementation </a></LI>
+<LI> <a HREF="#Deployment"> Deployment </a></LI>
+<LI> <a HREF="#Test"> Test </a></LI>
+</UL>
+
+<a NAME="UseCase"></a>
+<h2> Use Case </h2>
+<p>
+Fluid POC Use Case is to enhance an XML payload from a JMS message. Here is the
+description from Sam:
+</p>
+<b>1 Receive a message with an XML payload:</b>
+<PRE>
+&lt;presidents&gt;
+  &lt;president id="1" dob="02/22/1732"/&gt;
+  &lt;president id="2" dob="10/30/1735"/&gt;
+  &lt;president id="3" dob="04/13/1743"/&gt;
+  &lt;president id="4" dob="03/16/1751"/&gt;
+  &lt;president id="5" dob="04/28/1758"/&gt;
+&lt;/presidents&gt;
+</PRE>
+
+<b>2 Enhance the XML from a database containing records:</b>
+<PRE>
+id|name|birthplace
+1|George Washington|Westmoreland, Virginia Colony, British America
+2|John Adams|Quincy, Massachusetts
+3|Thomas Jefferson|Shadwell, Virginia
+4|James Madison|Port Conway, Virginia Colony
+5|James Monroe|Monroe Hall, Virginia
+</PRE>
+
+<b>3 Transform the XML and send a message with the payload:</b>
+<PRE>
+&lt;presidents&gt;
+  &lt;president name="George Washington" birthplace="Westmoreland, Virginia Colony, British America" dob="02/22/1732"/&gt;
+  &lt;president name="John Adams" birthplace="Quincy, Massachusetts" dob="10/30/1735"/&gt;
+  &lt;president name="Thomas Jefferson" birthplace="Shadwell, Virginia" dob="04/13/1743"/&gt;
+  &lt;president name="James Madison" birthplace="Port Conway, Virginia Colony" dob="03/16/1751"/&gt;
+  &lt;president name="James Monroe" birthplace="Monroe Hall, Virginia" dob="04/28/1758"/&gt;
+&lt;/presidents&gt;
+</PRE>
+
+<a NAME="Design"></a>
+<h2> High Level Design </h2>
+<p>
+We are going to implement a solution of the use case in the framework of
+QBroker. First let us outline the tasks in a workflow chart for the
+implementation with our high level design:
+</p>
+<OL>
+<LI> pick up a message with XML payload from a JMS queue</LI>
+<LI> parse the XML payload and start a for-each loop on the list of items</LI>
+<LI> for each item, retrieve the id and other data from its content</LI>
+<LI> with the id, query an external DB for more information about the item</LI>
+<LI> enhance the content with the query result</LI>
+<LI> aggregate the enhanced items into a single document</LI>
+<LI> rebuild the enhanced XML document</LI>
+<LI> deliver the message with the enhaned XML document to another JMS queue</LI>
+</OL>
+<p>
+In the framework of QBroker, there is no need to write any source code.
+We just need to convert the workflow into a message flow with those tasks
+mapped into certain building blocks, such as MessageNode, MessageReceiver and
+MessagePersister.
+</p>
+<p>
+The first task and the last task are for message I/O. In the framework of
+QBroker, MessageReceiver is designed to pick up messages from various data
+sources.  Among 13 implementations of MessageReceiver, JMSReceiver is to
+receive JMS messages from a JMS queue. Therefore, we are going to have an
+instance of JMSReceiver to accomplish the first task. For message delivery,
+MessagePersister is designed to deliver messages to various data destinations.
+There are 17 implementations of MessagePersister available. JMSPersister is
+to persist JMS messages to a JMS queue. So it will be used to accomplish
+the last task.
+</p>
+<p>
+Now the messages are available for the message flow. In order to enhance its
+content, we need to accomplish the rest tasks. In the framework of QBroker,
+MessageNode is designed to process messages. Currently, there are 27
+implementations of MessageNode available. One of them is SelectNode that
+parses the payload of JMS messages and selects the portions of the content
+according to the predefined rules. So an instance of SelectNode will be used
+for task 2 to start the for-each loop on each selected items.  According to
+the use case, the selected item will be an XML element of <tt>president</tt>.
+SelectNode will generate a new message and sets the content of the item to
+the message.
+</p>
+<p>
+For task 3, XPathNode is the best choice since the content is an XML element.
+XPathNode parses the XML content and retrieves the id and other attributes
+from it. All the retrieved data will be stored in the message as the properties.
+So they will be available later. The next task, task 4, involves with requests
+to at least one exteral resouces. CollectNode is designed for this kind of
+scenarios.  It acts like a helpdesk with a bunch of predefined rules and tasks.
+A number of persisters are linked to the instance of CollectNode for on-demand
+requests.  Therefore, CollectNode just dispatches the requests to them according
+to the predefined rules and tasks.  Once the responses are collected,
+CollectNode will route the message with the enhanced content to the next node.
+So an instance of CollectNode will be used for task 4 and 5.
+</p>
+<p>
+Task 6 is the end of the for-each loop. AggregateNode is the best fit. It
+aggregates the content of each messages and produces a new message with the
+aggregated data. In our case, the enhanced content from each messages will be
+appended to a single document. Therefore, the output of this node is a message
+with the enhanced and aggregataed content.
+</p>
+<p>
+Task 7 is to rebuild the XML document. An instance of FormatNode will be
+used to paste the XML content with the header and the footer. The output of
+this node will be a message with a valid XML payload. The next is the last
+task that will be covered by an instance of JMSPersister. To summarize,
+here is the diagram of the message flow:
+</p>
+<IMG VSPACE=10 ALIGN=TOP SRC="../misc/QBroker_XML.jpg" />
+<p>
+In the diagram, the dash lines indicate the interactions with exteranl
+data sources. In the framework of QBroker, each node is a dedicated thread.
+They communicate with the linked nodes via the internal queues.
+</p>
+
+<a NAME="Implementation"></a>
+<h2> Implementation </h2>
+<p>
+In the framework of QBroker, the implementation of a high level design for
+a message flow involves only the configurations of each nodes. There is no need
+to touch any source code since all the functionalities and features have
+already been built-in in terms of the nodes. It is similar to use various
+Apache modules to build a web server.  For each type of nodes, there are some
+<a href="../qbroker.html">documentations and examples</a> available.
+So it will not be too hard to figure how to configure a node.  Let us try to
+configure the nodes listed in the diagram one by one.
+</p>
+<b>1 JMSReceiver: xml_in</b>
+<p>
+The first node to config is an instance of
+<a href="../receiver/JMSReceiver.html"> JMSReceiver </a>, <b>xml_in</b>.
+It connects to a JMS service provided by ActiveMQ on the host of
+<tt>fluid.vgtf.net</tt>. The incoming messages are supposed to be available in
+the queue of <b>XML_IN</b>. Based on the information listed in the use case
+page, we have the configuration xml file for this node: 
+</p>
+<pre>
+&lt;xml_in&gt;
+  &lt;Name&gt;xml_in&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.JMSReceiver&lt;/ClassName&gt;
+  &lt;URI&gt;tcp://fluid.vgtf.net:61616&lt;/URI&gt;
+  &lt;ContexFactory&gt;org.apache.activemq.jndi.ActiveMQInitialContextFactory&lt;/ContexFactory&gt;
+  &lt;ConnectionFactoryName&gt;QueueConnectionFactory&lt;/ConnectionFactoryName&gt;
+  &lt;QueueName&gt;XML_IN&lt;/QueueName&gt;
+  &lt;IsPhysical&gt;true&lt;/IsPhysical&gt;
+  &lt;LinkName&gt;root&lt;/LinkName&gt;
+  &lt;Operation&gt;get&lt;/Operation&gt;
+  &lt;Mode&gt;daemon&lt;/Mode&gt;
+  &lt;XAMode&gt;1&lt;/XAMode&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;StringProperty&gt;
+    &lt;type&gt;president&lt;/type&gt;
+  &lt;/StringProperty&gt;
+&lt;/xml_in&gt;
+</pre>
+where <b>ClassName</b> specifies what class implementing the interface of
+MessageReceiver. Thanks to JMS standard, we just need to define the vendor
+specific JNDI properties to access the JMS services.
+<p>
+With this configuration, QBroker as the container will instanciate the receiver
+and starts a dedicated thread to listen on the queue. Once it receives a
+message, it will put the message to the internal queue, <b>root</b>. The message
+will be picked up by the next linked node, <b>select_node</b>.
+</p>
+<b>2 SelectNode: select_node</b>
+<p>
+The next node is an instance of
+<a href="../node/SelectNode.html"> SelectNode </a>, <b>select_node</b>.
+It picks up a JMS message from the internal queue of <b>root</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected XML content,
+the XML payload will be parsed by XPath engine. The selected DOM nodes will
+be converted to an array of text. For each selected item, it will create a
+new TextMessage. The selected text will be set to the new message before it
+is routed to the outlink of <b>items</b>. Here is the configuration:
+</p>
+<pre>
+&lt;select_node&gt;
+  &lt;Name&gt;select_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.SelectNode&lt;/ClassName&gt;
+  &lt;Description&gt;select items from XML&lt;/Description&gt;
+  &lt;Operation&gt;select&lt;/Operation&gt;
+  &lt;LinkName&gt;root&lt;/LinkName&gt;
+  &lt;Capacity&gt;8&lt;/Capacity&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;list&lt;/Name&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;type&gt;^president$&lt;/type&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;XPathExpression&gt;//president&lt;/XPathExpression&gt;
+    &lt;XAMode&gt;1&lt;/XAMode&gt;
+    &lt;TextMode&gt;1&lt;/TextMode&gt;
+    &lt;DisplayMask&gt;1&lt;/DisplayMask&gt;
+    &lt;CountField&gt;Count&lt;/CountField&gt;
+    &lt;StringProperty /&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;items&lt;/Name&gt;
+    &lt;Capacity&gt;1024&lt;/Capacity&gt;
+    &lt;Partition&gt;0,0&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;items&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;0,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;0,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+&lt;/select_node&gt;
+</pre>
+where this node contains only one rule named <b>list</b> with XPathExpression
+defined. The XPathExpression will be used to select the DOM nodes from the
+XML payload.  With this configuration, QBroker as the container will
+instanciate the node and starts a dedicated thread to select the incoming
+messages.
+<p>
+With the XML payload specified in the use case, the first message with selected
+item will have the following content in its message body:
+<pre>
+&lt;president id="1" dob="02/22/1732"/&gt;
+</pre>
+There will be 5 messages as the output from <b>select_node</b>. They will be
+sent to the outlink of <b>items</b> so that the next node is able to process
+them. Since the 2nd outlink is also set to <b>items</b> and the ruleset has
+CountField defined, the original message will also be routed to the outlink of
+<b>items</b> after all 5 messages are processed. This message is used to
+indicate the end of the loop.
+</p>
+<b>3 XPathNode: xpath_node</b>
+<p>
+The next node is an instance of
+<a href="../node/XPathNode.html"> XPathNode </a>, <b>xpath_node</b>.
+It picks up a JMS message from the internal queue of <b>items</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected XML content,
+the XML payload will be parsed by XPath engine. The values of the attribute id
+and the attribute dob will be stored in the message as the properties.
+The output message will be routed to the outlink of <b>parsed</b>.
+Here is the configuration:
+</p>
+<pre>
+&lt;xpath_node&gt;
+  &lt;Name&gt;xpath_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.XPathNode&lt;/ClassName&gt;
+  &lt;Description&gt;parse XML for properties&lt;/Description&gt;
+  &lt;Operation&gt;evaluate&lt;/Operation&gt;
+  &lt;LinkName&gt;items&lt;/LinkName&gt;
+  &lt;Capacity&gt;1024&lt;/Capacity&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;bypass&lt;/Name&gt;
+    &lt;PreferredOutLink&gt;parsed&lt;/PreferredOutLink&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;Count&gt;^\d+$&lt;/Count&gt;
+    &lt;/JMSPropertyGroup&gt;
+  &lt;/Ruleset&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;xml&lt;/Name&gt;
+    &lt;ResetOption&gt;0&lt;/ResetOption&gt;
+    &lt;PatternGroup type="ARRAY"&gt;
+      &lt;Pattern type="ARRAY"&gt;president&lt;/Pattern&gt;
+    &lt;/PatternGroup&gt;
+    &lt;XPathExpression&gt;
+      &lt;ID&gt;//@id&lt;/ID&gt;
+      &lt;DOB&gt;//@dob&lt;/DOB&gt;
+    &lt;/XPathExpression&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;parsed&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;8,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;8,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+&lt;/xpath_node&gt;
+</pre>
+where this node contains two rules. The first rule is <b>bypass</b> for the
+terminate messages. The second rule has XPathExpression defined. The
+XPathExpression contains two keys, <b>ID</b> and <b>DOB</b>. The values of
+the attributes will stored in the properties with these keys. Therefore,
+the value of <b>ID</b> or <b>DOB</b> will be available for later use.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to process the incoming messages.
+The processed message will be routed to the outlink of <b>parsed</b> upon
+success. Otherwise, the message will be routed to either <b>failure</b>
+or <b>nohit</b>.
+</p>
+<b>4 CollectNode: collect_node</b>
+<p>
+The next node is an instance of
+<a href="../node/CollectNode.html"> CollectNode </a>, <b>collect_node</b>.
+It picks up a JMS message from the internal queue of <b>parsed</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected properties for a rule,
+the tasks of the rule will be executed on the message. Here is the
+configuration of the node:
+</p>
+<pre>
+&lt;collect_node&gt;
+  &lt;Name&gt;collect_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.CollectNode&lt;/ClassName&gt;
+  &lt;Description&gt;collect responses&lt;/Description&gt;
+  &lt;Operation&gt;collect&lt;/Operation&gt;
+  &lt;LinkName&gt;parsed&lt;/LinkName&gt;
+  &lt;Capacity&gt;1024&lt;/Capacity&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;bypass&lt;/Name&gt;
+    &lt;PreferredOutLink&gt;collected&lt;/PreferredOutLink&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;Count&gt;^\d+$&lt;/Count&gt;
+    &lt;/JMSPropertyGroup&gt;
+  &lt;/Ruleset&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;db&lt;/Name&gt;
+    &lt;PreferredOutLink&gt;query&lt;/PreferredOutLink&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;ID&gt;^\d+$&lt;/ID&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;FieldName&gt;body&lt;/FieldName&gt;
+    &lt;Template&gt;SELECT name AS "NAME", birthplace AS "BIRTHPLACE" FROM presidents WHERE id=%%ID%%&lt;/Template&gt;
+    &lt;NextTask type="ARRAY"&gt;
+      &lt;Success&gt;eval&lt;/Success&gt;
+      &lt;FieldName&gt;RuleName&lt;/FieldName&gt;
+      &lt;Template&gt;name_birthplace_xpath&lt;/Template&gt;
+    &lt;/NextTask&gt;
+    &lt;NextTask type="ARRAY"&gt;
+      &lt;Success&gt;eval&lt;/Success&gt;
+      &lt;FieldName&gt;RuleName&lt;/FieldName&gt;
+      &lt;Template&gt;build_body&lt;/Template&gt;
+    &lt;/NextTask&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;collected&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;16,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;16,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;eval&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;query&lt;/OutLink&gt;
+&lt;/collect_node&gt;
+</pre>
+where this node contains two rules, too. The first rule is <b>bypass</b> for
+the terminate messages. The second rule has a number of NextTasks defined.
+<p>
+The second rule is named as <b>db</b>. It requires the incoming message
+contains a property of <b>ID</b> with a number.  The first task is for a
+DB query. As you can see, the SQL statement is defined in Template with
+a variable of <tt>%%ID%%</tt>. It tells the next node of JDBCPersister to
+retrieve the value from the message to set the parameter to the prepared
+statement. CollectNode will set the SQL statement to the message body before
+sending it to the outlink of <b>query</b>. On the other end of <b>query</b>,
+there is an instance of JDBCPersister to fulfill the DB query. The query result
+will be stored in the message body so CollectNode is able to evaluate it.
+</p>
+<p>
+Once the query result is collected, the node will invoke the next task to
+parse or extract the query result. The message will be sent to the outlink
+of <b>eval</b>. An instance of MessageEvaluator will be fufill the requests.
+After the last task finished, the message body should contain something like:
+</p>
+<pre>
+  &lt;president name="George Washington" birthplace="Westmoreland, Virginia Colony, British America" dob="02/22/1732"/&gt;
+</pre>
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to process the incoming messages.
+The process message will be routed to the outlink of <b>collected</b>.
+</p>
+<b>5 JDBCPersister: db_query</b>
+<p>
+<b>collect_node</b> has two persisters attached for on-demand requests. One
+of them is an instance of
+<a href="../persister/JDBCPersister.html"> JDBCPersister </a>, <b>db_query</b>.
+It connects to a
+JDBC data source for queries. It also listens to the internal queue of
+<b>query</b> for requests. The incoming message is supposed to have the SQL
+statement in the message body. The persister will retrieve the SQL statement
+and prepares it. If there are any variables, <tt>%%[^%]+%%</tt>, in the
+SQL statement, the persister will replace them with <tt>?</tt> as the parameters
+before the preparement. Then it will try to set them for the execution of 
+the statement. Once the query result is back, the content will be
+set to the message body. The message will be removed from the internal queue to
+indicate the response is ready. <b>collect_node</b> will monitor the message
+and collects the result.  Here is the configuration of this persister:
+</p>
+<pre>
+&lt;db_query&gt;
+  &lt;Name&gt;db_query&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.JDBCPersister&lt;/ClassName&gt;
+  &lt;URI&gt;jdbc:mysql://fluid.vgtf.net:3306/presidents&lt;/URI&gt;
+  &lt;DBDriver&gt;com.mysql.jdbc.Driver&lt;/DBDriver&gt;
+  &lt;Username&gt;fluid&lt;/Username&gt;
+  &lt;Password&gt;xxxx&lt;/Password&gt;
+  &lt;LinkName&gt;query&lt;/LinkName&gt;
+  &lt;ResultType&gt;4&lt;/ResultType&gt;
+  &lt;Operation&gt;query&lt;/Operation&gt;
+  &lt;MaxIdleTime&gt;28500&lt;/MaxIdleTime&gt;
+  &lt;DisplayMask&gt;6&lt;/DisplayMask&gt;
+  &lt;StringProperty&gt;
+    &lt;ReturnCode/&gt;
+    &lt;SQL/&gt;
+    &lt;TID/&gt;
+  &lt;/StringProperty&gt;
+&lt;/db_query&gt;
+</pre>
+where <b>ClassName</b> specifies what class implementing the interface of
+MessagePersister. Thanks to JDBC standard, we just need to define the URI 
+and the DBDriver for the specific data source. The ResultType of 4 means
+the query result in XML format.
+<p>
+With this configuration, QBroker as the container will instanciate the persister
+and starts a dedicated thread to connect to the DB.  In case there is an error
+on the DB operations, the persister will try to reconnect to the data source
+automatically. If the persister is idle for too long, it will hibernate to
+save the resources.
+</p>
+<b>6 MessageEvaluator: eval_out</b>
+<p>
+<b>eval_out</b> is another persister attached to <b>collect_node</b>. It is an
+instance of
+<a href="../persister/MessageEvaluator.html"> MessageEvaluator </a>.
+MessageEvaluator has a bunch of predefined rules.  Its main funaction is to
+apply a rule to evaluate the message. <b>collect_node</b> has two tasks
+referencing the rules in this persister. They are <tt>name_birthplace_xpath</tt>
+and <tt>build_body</tt>, respectively. The first rule is to retrieve name and
+birthplace from the query result. The second is to build an XML element with
+queried data.  So the instance of MessageEvaluator is supposed to define these
+two rules. Here is the configuration:
+</p>
+<pre>
+&lt;eval_out&gt;
+  &lt;Name&gt;eval_out&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.MessageEvaluator&lt;/ClassName&gt;
+  &lt;URI&gt;eval://&lt;/URI&gt;
+  &lt;Operation&gt;evaluate&lt;/Operation&gt;
+  &lt;LinkName&gt;eval&lt;/LinkName&gt;
+  &lt;DisplayMask&gt;6&lt;/DisplayMask&gt;
+  &lt;Ruleset&gt;
+    &lt;name_birthplace_xpath&gt;
+      &lt;JMSPropertyGroup type="ARRAY"&gt;
+        &lt;OriginalRC&gt;^0$&lt;/OriginalRC&gt;
+      &lt;/JMSPropertyGroup&gt;
+      &lt;PatternGroup type="ARRAY"&gt;
+        &lt;Pattern type="ARRAY"&gt;NAME&lt;/Pattern&gt;
+        &lt;Pattern type="ARRAY"&gt;BIRTHPLACE&lt;/Pattern&gt;
+      &lt;/PatternGroup&gt;
+      &lt;XPathExpression&gt;
+        &lt;Name&gt;//NAME&lt;/Name&gt;
+        &lt;BirthPlace&gt;//BIRTHPLACE&lt;/BirthPlace&gt;
+      &lt;/XPathExpression&gt;
+      &lt;StringProperty&gt;
+        &lt;ReturnCode/&gt;
+        &lt;TID/&gt;
+        &lt;Name/&gt;
+        &lt;BirthPlace/&gt;
+      &lt;/StringProperty&gt;
+    &lt;/name_birthplace_xpath&gt;
+    &lt;build_body&gt;
+      &lt;JMSPropertyGroup type="ARRAY"&gt;
+        &lt;Name&gt;.&lt;/Name&gt;
+        &lt;BirthPlace&gt;.&lt;/BirthPlace&gt;
+        &lt;DOB&gt;.&lt;/DOB&gt;
+      &lt;/JMSPropertyGroup&gt;
+      &lt;FormatterArgument type="ARRAY"&gt;
+        &lt;FieldName&gt;body&lt;/FieldName&gt;
+        &lt;Template type="ARRAY"&gt;  &amp;lt;presitent name="##Name##" birthplace="##BirthPlace##" dob="##DOB##" /&amp;gt;
+&lt;/Template&gt;
+      &lt;/FormatterArgument&gt;
+      &lt;StringProperty&gt;
+        &lt;ReturnCode/&gt;
+        &lt;TID/&gt;
+      &lt;/StringProperty&gt;
+    &lt;/build_body&gt;
+  &lt;/Ruleset&gt;
+&lt;/eval_out&gt;
+</pre>
+<p>
+In this configuration, there lists only two rules. In other cases, it may
+contain other types of rules.
+</p>
+<b>7 AggregateNode: aggregate_node</b>
+<p>
+The next node is an instance of
+<a href="../node/AggregateNode.html"> AggregateNode </a>, <b>aggregate_node</b>.
+It is the end of the for-each loop.
+It picks up a JMS message from the internal queue of <b>collected</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected XML content for an
+aggregation rule, the data will be extracted from the message. They will be
+aggregated to a cached message. In the use case, the individual XML elements
+will be appended to the body of the cached message. Once the terminate message
+arrives, the aggregation session will end. The cached message will be sent
+to the first outlink, <b>merged</b>. Here is the configuration:
+</p>
+<pre>
+&lt;aggregate_node&gt;
+  &lt;Name&gt;aggregate_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.AggregateNode&lt;/ClassName&gt;
+  &lt;Description&gt;append XML elements&lt;/Description&gt;
+  &lt;Operation&gt;aggregate&lt;/Operation&gt;
+  &lt;LinkName&gt;collected&lt;/LinkName&gt;
+  &lt;Capacity&gt;1024&lt;/Capacity&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;xml&lt;/Name&gt;
+    &lt;KeyTemplate&gt;##type##&lt;/KeyTemplate&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;type&gt;^president$&lt;/type&gt;
+      &lt;Name&gt;.&lt;/Name&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;JMSPropertyGroup type="ARRAY"&gt;
+      &lt;type&gt;^president$&lt;/type&gt;
+      &lt;Count&gt;^\d+$&lt;/Count&gt;
+    &lt;/JMSPropertyGroup&gt;
+    &lt;Aggregation type="ARRAY"&gt;
+      &lt;FieldName&gt;Count&lt;/FieldName&gt;
+      &lt;Operation&gt;max&lt;/Operation&gt;
+      &lt;DefaultValue&gt;0&lt;/DefaultValue&gt;
+    &lt;/Aggregation&gt;
+    &lt;BodyAggregation&gt;
+      &lt;Operation&gt;append&lt;/Operation&gt;
+      &lt;DefaultValue/&gt;
+    &lt;/BodyAggregation&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;merged&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;null&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;24,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;24,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+&lt;/aggregate_node&gt;
+</pre>
+where the only rule is an aggregation rule.  In our case, the cached message
+will have the following content:
+<pre>
+  &lt;president name="George Washington" birthplace="Westmoreland, Virginia Colony, British America" dob="02/22/1732"/&gt;
+  &lt;president name="John Adams" birthplace="Quincy, Massachusetts" dob="10/30/1735"/&gt;
+  &lt;president name="Thomas Jefferson" birthplace="Shadwell, Virginia" dob="04/13/1743"/&gt;
+  &lt;president name="James Madison" birthplace="Port Conway, Virginia Colony" dob="03/16/1751"/&gt;
+  &lt;president name="James Monroe" birthplace="Monroe Hall, Virginia" dob="04/28/1758"/&gt;
+</pre>
+As you can see, it is not a valid XML document yet.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to process the incoming messages.
+All the incoming messages will be routed to the outlink of <b>null</b>.
+The cached message with the aggregated data will be routed to the outlink
+of <b>merged</b>.
+</p>
+<b>8 FormatNode: format_node</b>
+<p>
+The next node is an instance of
+<a href="../node/FormatNode.html"> FormatNode </a>, <b>format_node</b>.
+It picks up a JMS message from the internal queue of <b>merged</b>.
+It matches each rules against the incoming message to figure out which rule to
+invoke on the message. If the message has the expected properties for a
+format rule, the message will be formatted according to the rule. In this use
+case, The message body will be prepended a header and be appended a footer.
+Here is the configuration:
+</p>
+<pre>
+&lt;format_node&gt;
+  &lt;Name&gt;format_node&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.FormatNode&lt;/ClassName&gt;
+  &lt;Description&gt;format a message&lt;/Description&gt;
+  &lt;Operation&gt;format&lt;/Operation&gt;
+  &lt;LinkName&gt;merged&lt;/LinkName&gt;
+  &lt;Capacity&gt;1024&lt;/Capacity&gt;
+  &lt;DisplayMask&gt;0&lt;/DisplayMask&gt;
+  &lt;Debug&gt;1&lt;/Debug&gt;
+  &lt;Ruleset type="ARRAY"&gt;
+    &lt;Name&gt;xml&lt;/Name&gt;
+    &lt;ResetOption&gt;0&lt;/ResetOption&gt;
+    &lt;PatternGroup type="ARRAY"&gt;
+      &lt;Pattern type="ARRAY"&gt;president&lt;/Pattern&gt;
+    &lt;/PatternGroup&gt;
+    &lt;FormatterArgument type="ARRAY"&gt;
+      &lt;FieldName&gt;body&lt;/FieldName&gt;
+      &lt;Template type="ARRAY"&gt;&amp;lt;?xml version="1.0" encoding="UTF-8"?&amp;gt;
+&amp;lt;presitents&amp;gt;
+##body##&amp;lt;/presitents&amp;gt;&lt;/Template&gt;
+    &lt;/FormatterArgument&gt;
+  &lt;/Ruleset&gt;
+  &lt;OutLink type="ARRAY"&gt;XML_OUT&lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;failure&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;32,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+  &lt;OutLink type="ARRAY"&gt;
+    &lt;Name&gt;nohit&lt;/Name&gt;
+    &lt;Capacity&gt;48&lt;/Capacity&gt;
+    &lt;Partition&gt;32,8&lt;/Partition&gt;
+  &lt;/OutLink&gt;
+&lt;/format_node&gt;
+</pre>
+where there is only one rule. The output message will have the content like
+the end result of the use case.
+<p>
+With this configuration, QBroker as the container will instanciate the node
+and starts a dedicated thread to process the incoming messages.
+The message with the valid XML content will be routed to the outlink of
+<b>XML_OUT</b> for delivery.
+</p>
+<b>9 JMSPersister: xml_out</b>
+<p>
+The last node is an instance of
+<a href="../persister/JMSPersister.html"> JMSPersister </a>, <b>XML_OUT</b>.
+It connects to a JMS service provided by ActiveMQ on the host of
+<tt>fluid.vgtf.net</tt>. It picks up the incoming messages from the internal
+queue of <b>XML_OUT</b>. They will be deliverd to the JMS queue of
+<b>XML_OUT</b> on <tt>fluid.vgtf.net</tt>.
+Here is the configuration xml file for this node: 
+</p>
+<pre>
+&lt;xml_out&gt;
+  &lt;Name&gt;xml_out&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.JMSPersister&lt;/ClassName&gt;
+  &lt;URI&gt;tcp://fluid.vgtf.net:61616&lt;/URI&gt;
+  &lt;ContexFactory&gt;org.apache.activemq.jndi.ActiveMQInitialContextFactory&lt;/ContexFactory&gt;
+  &lt;ConnectionFactoryName&gt;QueueConnectionFactory&lt;/ConnectionFactoryName&gt;
+  &lt;QueueName&gt;XML_OUT&lt;/QueueName&gt;
+  &lt;IsPhysical&gt;true&lt;/IsPhysical&gt;
+  &lt;LinkName&gt;XML_OUT&lt;/LinkName&gt;
+  &lt;Operation&gt;put&lt;/Operation&gt;
+  &lt;XAMode&gt;1&lt;/XAMode&gt;
+  &lt;DisplayMask&gt;6&lt;/DisplayMask&gt;
+  &lt;Persistence&gt;2&lt;/Persistence&gt;
+&lt;/xml_out&gt;
+</pre>
+where <b>ClassName</b> specifies what class implementing the interface of
+MessagePersister.
+<p>
+With this configuration, QBroker as the container will instanciate the persister
+and starts a dedicated thread to listen on the queue. Once it receives a
+message from the internal queue, it will put the message to the JMS queue,
+<b>XML_OUT</b>.
+</p>
+<b>10 Container: QBroker</b>
+<p>
+We have lefted out some of the persisters, such as <b>failure_out</b>,
+<b>nohit_out</b> and <b>null_out</b>. All of them are instances of
+<a href="../persister/LogPersister.html"> LogPersister </a>.
+If you are interested in them, you can look at them on
+<a href="http://intevent/ajax/configuration.html?view=configuration&SITE=INTREF&APPN=QBR&service=XML"> WebAdmin </a>.
+</p>
+<p>
+We have finally completed the implementation processes on each of the nodes.
+But it is not done yet. We still need add them to the container of QBroker.
+Think about the configurations of Apache web server. After you have completed
+the configurations for all the modules, you still need to reference them
+in the master config file, <tt>httpd.conf</tt>. Here is the master configuration
+file for QBroker_XML:
+</p>
+<pre>
+&lt;QBroker&gt;
+  &lt;Name&gt;QBroker&lt;/Name&gt;
+  &lt;ClassName&gt;com.cnn.pses.broker.QBroker&lt;/ClassName&gt;
+  &lt;Type&gt;QBroker&lt;/Type&gt;
+  &lt;XAMode&gt;1&lt;/XAMode&gt;
+  &lt;Capacity&gt;8&lt;/Capacity&gt;
+  &lt;Mode&gt;daemon&lt;/Mode&gt;
+  &lt;LogDir&gt;/var/log/qbroker&lt;/LogDir&gt;
+  &lt;LogPattern&gt;.'MM'&lt;/LogPattern&gt;
+  &lt;ConfigDir&gt;/opt/qbroker/cfg/XML&lt;/ConfigDir&gt;
+  &lt;Heartbeat&gt;60&lt;/Heartbeat&gt;
+  &lt;MaxNumberFlow&gt;1&lt;/MaxNumberFlow&gt;
+  &lt;AdminServer&gt;
+    &lt;ClassName&gt;com.cnn.pses.broker.ServerReceiver&lt;/ClassName&gt;
+    &lt;URI&gt;tcp://localhost:7227&lt;/URI&gt;
+    &lt;Operation&gt;respond&lt;/Operation&gt;
+    &lt;Capacity&gt;64&lt;/Capacity&gt;
+    &lt;Partition&gt;0,32&lt;/Partition&gt;
+    &lt;EOTBytes&gt;0x0a&lt;/EOTBytes&gt;
+    &lt;TextMode&gt;1&lt;/TextMode&gt;
+    &ltTemplate&gt;##body##
+&lt;/Template&gt;
+    &lt;Parser&gt;
+      &lt;ClassName&gt;com.cnn.pses.event.EventParser&lt;/ClassName&gt;
+    &lt;/Parser&gt;
+    &lt;RestartScript&gt;/bin/sh -c "/opt/qbroker/init.d/QBroker_XML restart &amp;amp;"&lt;/RestartScript&gt;
+  &lt;/AdminServer&gt;
+  &lt;Reporter type="ARRAY"&gt;rotation_qb_out&lt;/Reporter&gt;
+  &lt;Reporter type="ARRAY"&gt;rotation_stats_out&lt;/Reporter&gt;
+  &lt;Receiver type="ARRAY"&gt;xml_in&lt;/Receiver&gt;
+  &lt;Node type="ARRAY"&gt;select_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;xpath_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;collect_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;aggregate_node&lt;/Node&gt;
+  &lt;Node type="ARRAY"&gt;format_node&lt;/Node&gt;
+  &lt;Persister type="ARRAY"&gt;xml_out&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;db_query&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;eval_out&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;null_out&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;failure_out&lt;/Persister&gt;
+  &lt;Persister type="ARRAY"&gt;nohit_out&lt;/Persister&gt;
+&lt;/QBroker&gt;
+</pre>
+where the plugin of AdminServer is for remote managements of the container. 
+<p>
+Congratulations. We have finally completed the implementation of
+Fluid POC Use Case. If this message flow is deployed to IO.2.0 land, it will
+work as designed.
+</p>
+</body>
+</html>

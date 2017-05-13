@@ -1,0 +1,247 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> DistinguishNode </B> </FONT>
+</CENTER>
+
+<p>
+DistinguishNode is a filter node that applies the distinguish operation on
+each incoming messages to remove the duplicated copies according to their keys
+and optional versions.  It filters messages into four outlinks: done for
+all distinct messages, bypass for those duplicate messages, failure for
+those messages failed in the distinguishing processes, and nohit for all
+the messages that do not hit any explicitly defined ruleset.
+</p>
+<img vspace=10 halign=center src="DistinguishNode.jpg" />
+<p>
+DistinguishNode contains a number of predefined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also specifies the parameters
+to control the message filtering process on the group.  Furthermore,
+the content filtering can be enabled or disabled dynamically via the
+sessions and monitors.  If SessionTimeout is set to 0, it will only do
+static filtering.  The number of the keys cached is tracked via the
+RULE_PEND field. If VersionTemplate is defined for a ruleset, DistinguishNode
+will retrieve the version info from the messages to enforce the version
+control. It means the messages with older versions will be treated as the
+duplicates.
+</p>
+<p>
+DistinguishNode also supports the cache mode. If a ruleset is defined with
+its RuleType as "cache", another reserved word, the node is on cache mode.
+The cache rule is designed for active-passive message flow clusters.  It
+assumes that the master escalates each processed message to the worker flow.
+On the worker side, its DistinguishNode processes the escalated messages
+from the master to cache the keys of them. It keeps the state cache on the
+worker flow in sync with the master.  When the failover occurs, the worker
+flow with the current cache will be ready to be promoted to the master.
+Since the cache on the new master is current, any processed message will not
+be routed to the done outlink. The cache rule on worker flow has a different
+routing behavior. Since all the messages have already been processed on the
+master, the messages with the unique keys will be routed to nohit outlink.
+The rest of the messages will be routed to failure outlink, if there is any.
+If DistinguishNode is on cache mode, its uplink must have the 2nd half of
+the cells unused. The unused partition will be reserved for escalations.
+</p>
+<p>
+DistiguishNode always adds an extra ruleset for the nohit messages.
+This nohit ruleset is always the first ruleset with the id of 0.
+On the node level, DisplayMask and StringProperty control the display result
+of outgoing messages.
+</p>
+<p>
+You are free to choose any names for the four fixed outlinks.  But
+DistiguishNode always assumes the first outlink for done, the second for
+bypass, the third for failure and the last for nohit.  The outlink of failure
+or nohit can share the same name with the first two others.  It means these
+outlinks may share the same output channel.
+</p>
+<p>
+Apart from the common properties, there are some implementation specific
+properties for DistinguishNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> SessionTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout of the session for failover in seconds </TD> <TD> 120 (default: 300) </TD>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to check sessions </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> CacheTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in sec for the cache to be disfragmented </TD> <TD> 3600 (default: 0) </TD>
+</TR>
+<TR>
+<TD> CacheThreshold </TD> <TD> integer </TD> <TD> optional </TD> <TD> threshold for the cache to be disfragmented </TD> <TD> 200000 (default: 0) </TD>
+</TR>
+</TABLE>
+where SessionTimeout defines the length of the session.  Heartbeat controls
+how often to check the session state.  If SessionTimeout is 0, there is no
+check on the sessions.
+</p>
+
+<p>
+The distinguish operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of
+DistinguishNode.  Here are complete properties of rulesets for DistinguishNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> RuleType </TD> <TD> string </TD> <TD> optional </TD> <TD> type of the ruleset </TD> <TD> cache </TD>
+</TR>
+<TR>
+<TD> KeyTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the unique key </TD> <TD> ##site## </TD>
+</TR>
+<TR>
+<TD> KeySubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text subsctitution for the unique key </TD> <TD> s/^0// </TD>
+</TR>
+<TR>
+<TD> VersionTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the version </TD> <TD> ##JMSTimestamp## </TD>
+</TR>
+<TR>
+<TD> TimePattern </TD> <TD> string </TD> <TD> optional </TD> <TD> time patterh to parse the version </TD> <TD> yyyy-MM-dd HH:mm:ss.SSS </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where the implementation only supports three different types of rules,
+bypass, distinct and cache.  PreferredOutLink can be defined for bypass
+rulesets only.  In this case, the messages of the group will not be processed.
+Here is an example of the bypass ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it sends the messages to the outlink of BYPASS without processing them.
+</p>
+<p>
+Here is an example of the distinguish ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "first_job",
+    "JMSPropertyGroup": [{
+      "messageType": "8",
+      "timeStamp": "."
+    }],
+    "TimeToLive": "7200",
+    "KeyTemplate": "##guid##/##status##"
+  }],
+  ...
+}
+</pre>
+where it extracts the key from the message and checks the key existence in the
+cache.  If no, the message will be routed to the first outlink and the key will
+be added to the cache.  Otherwise, the message is a duplicate.  The duplicate
+messages will be routed to bypass outlink.
+</p>
+<p>
+Here is an example of the cache ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "cache_job",
+    "RuleType": "cache",
+    "JMSPropertyGroup": [{
+      "messageType": "8",
+      "timeStamp": "."
+    }],
+    "TimeToLive": "7200",
+    "KeyTemplate": "##guid##/##status##"
+  }],
+  ...
+}
+</pre>
+where it checks the key in the cache and adds it to the cache.
+</p>
+
+<p>
+Here is an example of DistinguishNode:
+
+<pre>
+{
+  "Name": "node_distinct",
+  "ClassName": "org.qbroker.node.DistinguishNode",
+  "Description": "propagate distinct messages",
+  "Operation": "distinguish",
+  "LinkName": "MAS",
+  "Capacity": "32",
+  "DisplayMask": "0",
+  "Debug": "11",
+  "Heartbeat": "300",
+  "SessionTimeout": "1800",
+  "Threshold": "0,50,100",
+  "Ruleset": [{
+    "Name": "cache_file",
+    "RuleType": "cache",
+    "JMSPropertyGroup": [{
+      "category": ".",
+      "messageType": "6"
+    }],
+    "TimeToLive": "7200",
+    "KeyTemplate": "##serverIP##/##timeStamp##/##notificationType##/##fileURL##"
+  },{
+    "Name": "first_file",
+    "JMSPropertyGroup": "
+      "messageType": "6",
+      "timeStamp": "."
+    }],
+    "TimeToLive": "7200",
+    "KeyTemplate": "##serverIP##/##timeStamp##/##notificationType##/##fileURL##"
+  }],
+  "OutLink": ["OMN", "MAS_BACKUP", {
+    "Name": "failure",
+    "Capacity": "128",
+    "Partition": "32,32"
+  },{
+    "Name": "null",
+    "Capacity": "128",
+    "Partition": "32,32"
+  }]
+}
+</pre>
+where the node is on the cache mode. Since the uplink, <b>MAS</b>, has the
+capacity of 32, the partition of (16, 16) is supposed to be reserved for
+escalations.
+</p>
+
+</body>
+</html>

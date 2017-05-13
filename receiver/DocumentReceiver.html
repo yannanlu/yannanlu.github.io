@@ -1,0 +1,79 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> DocumentReceiver </B> </FONT>
+</CENTER>
+
+<p>
+DocumentReceiver is a JMS message producer that queris a document-oriented
+database and converts the result into a JMS Message. It puts the message to
+the XQueue as the output. On the other end of the XQueue, the node is supposed
+to receive the message. DocumentReceiver supports flow control and allows
+object control from its owner.  It is fault tolerant with retry and idle
+options.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for DocumentReceiver.  Most of them depends on the schemes.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Retry </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of retry before to give up the delivery </TD> <TD> 2 </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the request </TD> <TD> </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Currently, DocumentReceiver only supports MongoDB, in terms of the scheme
+of mongodb.  In the near future, it will support CouchDB. Here is the
+matrix of supported operations for various schemes:
+<TABLE border=1>
+<TR>
+<TH> Scheme </TH> <TH>Operation</TH> <TH> Description </TH>
+</TR>
+<TR>
+<TD> mongodb </TD> <TD> findone </TD> <TD> query documents from a collection </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of DocumentReceiver:
+
+<pre>
+{
+  "Name": "rcvr_doc",
+  "ClassName": "org.qbroker.receiver.DocumentReceiver",
+  "URI": "mongodb://localhost/test",
+  "LinkName": "root",
+  "Operation": "findone",
+  "XAMode": "1",
+  "Retry": "1",
+  "DisplayMask": "6",
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "time_window",
+      "URI": "file:///var/log/nginx/access.log",
+      "Type": "FileMonitor"
+    }]
+  }]
+}
+</pre>
+where it sends the query to test database of the MongoDB server and
+puts the query result to the message body.
+</p>
+
+</body>
+</html>

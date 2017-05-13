@@ -1,0 +1,57 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> RedisReceiver </B> </FONT>
+</CENTER>
+
+<p>
+RedisReceiver is a JMS message producer that block-pops items from a given
+Redis list or subscribes messages from a given Redis channel. It puts the
+content to JMS messages.  Those messages will be sent to an XQueue as the
+output. RedisReceiver supports flow control and allows object control from
+its owner.  It is fault tolerant with retry and idle options.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for RedisReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> DefaultKeyName </TD> <TD> string </TD> <TD> required </TD> <TD> the name of channel or the list </TD> <TD> mylist </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Currently, RedisReceiver only supports two operations, get and sub.
+</p>
+
+<p>
+Here is an example of RedisReceiver:
+
+<pre>
+{
+  "Name": "rcvr_redis",
+  "ClassName": "org.qbroker.receiver.RedisReceiver",
+  "URI": "redis://localhost:6379",
+  "LinkName": "root",
+  "Partition": "0,0",
+  "Operation": "sub",
+  "DefaultKeyName": "ch1",
+  "Mode": "daemon",
+  "XAMode": "0",
+  "TextMode": "1",
+  "DisplayMask": "0"
+}
+</pre>
+where it subscribes to the channel of <b>ch1</b>.
+</p>
+
+</body>
+</html>

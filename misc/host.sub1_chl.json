@@ -1,0 +1,32 @@
+{
+  "Name": "host.sub1_chl",
+  "ClassName": "org.qbroker.wmq.ChannelMonitor",
+  "Site": "DEVOPS",
+  "Type": "ChannelMonitor",
+  "Category": "WMQ",
+  "Description": "generic channel to SUBSCRIBER1",
+  "Step": "1",
+  "Tolerance": "0",
+  "MaxRetry": "0",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "QueueManager": "##HOSTNAME##",
+  "ChannelName": "##HOST##.SUB1",
+  "ChannelType": "Sender",
+  "QueueName": "SUBSCRIBER1",
+  "QueueOpenMode": "NotKeepOpen",
+  "StatsLog": "/var/log/qbroker/stats/##host##.sub1.mq",
+  "StaticDependencyGroup": [{
+    "Dependency": ["rpt_broker"]
+  }],
+  "ShortHostName": {
+    "SUBSCRIBER1": "SUB1",
+    "SUBSCRIBER2": "SUB2"
+  },
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

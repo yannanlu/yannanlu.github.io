@@ -1,0 +1,185 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ScriptNode </B> </FONT>
+</CENTER>
+
+<p>
+ScriptNode processes JMS messages via JSR223 compliant scripts.
+There are three outlinks, done for the formatted messages, failure
+for those messages failed in the process and nohit for those messages
+not belonging to any predefined rulesets.
+</p>
+<img vspace=10 halign=center src="ScriptNode.jpg" />
+<p>
+ScriptNode contains a number of predefined rulesets.  These rulesets categorize
+messages into non-overlapping groups.  Therefore, each rule defines a unique
+message group.  The ruleset also defines the parameters for the script, a
+template for the path to the scripts, and the TTL. The template is used to
+build the full path to the the scripts.  The script has to be accessible from
+the filesystem or the supported storage. The original JSON payload should be
+always stored in the message body. The cache count of scripts for the rule will
+be stored to RULE_PEND. It will be updated when the session time exceeds the
+given SessionTimeout. ScriptNode caches every compiled script dynamically.
+You can set the TTL for each rule so that the script will be expired and
+removed automatically. For parameters, ScriptNode supports dynamic setting
+of parameters.  It means you can reference properties of the message in your
+parameters.  ScriptNode will retrieve the data from incoming message and set
+the parameters before the format process.
+</p>
+<p>
+ScriptEngine must be defined for a rule, ScriptNode will format the JSON data
+with the script specified in the messages. The script is supposed to have
+a function of format defined. It takes a Java Map object as the only
+argument. The Map is the representation of the JSON data. The function is
+supposed to modify the Map. The updated Map will be converted back to JSON
+payload of the message. The cache count of engines for the rule will be
+stored to RULE_PEND. It will be updated when the session time exceeds the
+given SessionTimeout.
+</p>
+<p>
+ScriptNode always adds an extra ruleset for the nohit messages. This nohit
+ruleset is always the first ruleset with the id of 0. On the node level,
+DisplayMask and StringProperty control the display result of outgoing messages.
+</p>
+<p>
+You are free to choose any names for the three fixed outlinks.  But ScriptNode
+always assumes the first outlink for done, the second for failure and the last
+for nohit.
+</p>
+
+<p>
+Apart from the common properties, there are three implementation specific
+properties for ScriptNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> SessionTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in sec for a session </TD> <TD> 3600 (default: 0) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+The format process is invoked via the pre-defined rulesets. Therefore, the
+configuration of the rulesets is critical to the operations of ScriptNode.
+Here are complete properties of rulesets for ScriptNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> URITemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the full path of the script file </TD> <TD> /opt/qbroker/scripts/##ScriptName##.js </TD>
+</TR>
+<TR>
+<TD> URISubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text substitution for the full path of the template file </TD> <TD> s/\.js$/\.rb/ </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds to cache the scripts </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> Parameter </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting json parameters from the messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> ScriptEngine </TD> <TD> string </TD> <TD> mandatory for script </TD> <TD> the name of the script engine </TD> <TD> JavaScript </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where Parameter specifies the parameters for the format process.
+PreferredOutLink can be defined for bypass rulesets only.  In this case,
+the messages of the group will not be formatted.  Here is an example for
+the bypass ruleset:
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "NOHIT",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it routes the messages to the outlink of NOHIT.
+</p>
+
+<p>
+Here is an example of the script ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "rb",
+    "JMSPropertyGroup": [{
+      "FileName": "\\.rb$"
+    }],
+    "URITemplate": "##FileName##",
+    "ScriptEngine": "ruby"
+  }],
+  ...
+}
+</pre>
+where it expects that the message has defined the full path of a ruby script
+file in its property of FileName.  The node will compile the script from the
+path and invokes it on the parsed JSON payload.  Upon success, the message
+body will contain the new JSON content.
+</p>
+
+<p>
+Here is an example of ScriptNode:
+<pre>
+{
+  "Name": "node_script",
+  "ClassName": "org.qbroker.node.ScriptNode",
+  "Description": "format messages",
+  "Operation": "format",
+  "LinkName": "root",
+  "Capacity": "6",
+  "WaitTime": "50",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "SessioTimeout": "600",
+  "Ruleset": [{
+    "Name": "html",
+    "JMSPropertyGroup": [{
+      "JMSType": "."
+    }],
+    "ScriptEngine": "JavaScript",
+    "URITemplate": "/opt/qbroker/scripts/##JMSType##.js",
+    "TimeToLive": "3600"
+  }],
+  "OutLink": ["done", "failure", "nohit"]
+}
+</pre>
+</p>
+
+</body>
+</html>

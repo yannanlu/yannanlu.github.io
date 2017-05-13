@@ -1,0 +1,23 @@
+{
+  "Name": "panda1_qhc",
+  "ClassName": "org.qbroker.jms.JMSHealthChecker",
+  "Site": "DEVOPS",
+  "Type": "JMSHealthChecker",
+  "Category": "WMQ",
+  "Description": "JMS Q health-check",
+  "Step": "20",
+  "URI": "wmq://panda1",
+  "QueueName": "JSON_IN",
+  "JMSPropertyGroup": {
+    "JMSType": "monitor/json",
+    "Action": "HealthCheck",
+  },
+  "MessageBody": "{\"hostname\":\"##hostname##\",\"date\":\"##date##\",\"monitor\":\"This is a health-check\"}",
+  "ReportName": "panda1_q",
+  "ReportKey": ["TestTime", "DstStatus"],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

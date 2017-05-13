@@ -1,0 +1,26 @@
+{
+  "Name": "catch_q",
+  "ClassName": "org.qbroker.wmq.QueueMonitor",
+  "Site": "DEVOPS",
+  "Type": "QueueMonitor",
+  "Category": "WMQ",
+  "Description": "Catch Queue",
+  "Step": "1",
+  "Tolerance": "0",
+  "MaxRetry": "0",
+  "MaxPage": "2",
+  "QuietPeriod": "0",
+  "ExceptionTolerance": "-1",
+  "Timeout": "30",
+  "QueueManager": "##HOSTNAME##",
+  "QueueName": "CATCH",
+  "WaterMark": "1",
+  "StaticDependencyGroup": [{
+    "Dependency": "rpt_broker"
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}

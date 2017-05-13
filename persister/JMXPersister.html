@@ -1,0 +1,146 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JMXPersister </B> </FONT>
+</CENTER>
+
+<p>
+JMXPersister is a JMS message consumer that retrieves the JMX request from the
+message and sends it to a JMX server for a query or an action. Once the query
+result is returned, it will put the result into the message body and removes
+the message from the internal XQueue.  JMXPersister supports generic JMX
+implentations.  It also supports non-standard implementations, such as WMQ PCF
+and QPid QMF.  Currently only one operation, display, is supported.  It also
+supports flow control and XA.  Fault tolerance with auto reconnections is built
+in.
+</p>
+<p>
+For JMX statement, it is similar to PCF statement. For example, to list all
+queues with the patten of mbean_pattern for IMQ:
+DISPLAY QUEUE(mbean_pattern) TYPE(IMQ)
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for JMXPersister.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> JMXField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for JMX query statement </TD> <TD> (default: JMX) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> ResultField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store the number of rows returned </TD> <TD> (default: SQLResult) </TD>
+</TR>
+<TR>
+<TD> ResultType </TD> <TD> integer </TD> <TD> mandatory </TD> <TD> type of the result </TD> <TD> 8 for JSON (default: 1) </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the JMX statement </TD> <TD> </TD>
+</TR>
+</TABLE>
+where most of the implementation specific properties are for presentations.
+</p>
+
+<p>
+Beside of generic JMX implementations, there is also a dedicate implementation
+for IBM WebSphere MQ via PCF command.  For IBM WebSphere MQ, here are the
+vendor-specific properties for JMXPersister.
+
+<TABLE border=1>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> PCFField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for PCF query statement </TD> <TD> (default: PCF) </TD>
+</TR>
+<TR>
+<TD> ChannelName </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the WMQ SVRCONN channel </TD> <TD> TEST (default: SYSTEM.DEF.SVRCONN) </TD>
+</TR>
+<TR>
+<TD> SecurityExit </TD> <TD> string </TD> <TD> optional </TD> <TD> classname of the securit exit </TD> <TD> org.qbroker.wmq.SimpleSecurityExit </TD>
+</TR>
+<TR>
+<TD> SecurityData </TD> <TD> string </TD> <TD> optional </TD> <TD> argument passed into the securit exit </TD> <TD> </TD>
+</TR>
+</TABLE>
+where SecurityExit specifies the full classname for WMQ authentications.
+</p>
+
+For QPid QMF, here are the vendor-specific properties for JMXPersister.
+<TABLE border=1>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> QMFField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for QMF query statement </TD> <TD> (default: QMF) </TD>
+</TR>
+</TABLE>
+
+<p>
+Here is an example of JMXPersister for JMX:
+
+<pre>
+{
+  "Name": "pstr_jmx",
+  "ClassName": "org.qbroker.persister.JMXPersister",
+  "URI": "service:jmx:rmi:///jndi/rmi://localhost:8999/jmxrmi",
+  "Operation": "display",
+  "LinkName": "AMQ",
+  "Username": "admin",
+  "Password": "admin",
+  "JMXField": "JMX",
+  "ResultType": "8",
+  "MaxNumberMessage": "500",
+  "MaxIdleTime": "600",
+  "DisplayMask": "22"
+}
+</pre>
+</p>
+
+<p>
+Here is an example of JMXPersister for PCF:
+
+<pre>
+{
+  "Name": "pstr_pcf",
+  "ClassName": "org.qbroker.persister.JMXPersister",
+  "URI": "pcf://panda1",
+  "Operation": "display",
+  "LinkName": "PCF",
+  "PCFField": "PCF",
+  "ResultType": "8",
+  "MaxNumberMessage": "500",
+  "MaxIdleTime": "600",
+  "DisplayMask": "22"
+}
+</pre>
+</p>
+
+<p>
+Here is an example of JMXPersister for QMF:
+
+<pre>
+{
+  "Name": "pstr_qmf",
+  "ClassName": "org.qbroker.persister.JMXPersister",
+  "URI": "amqp://guest:guest@clientid/test?brokerlist='tcp://localhost:5672'&cf=local",
+  "Operation": "display",
+  "LinkName": "QMF",
+  "QMFField": "JMX",
+  "ResultType": "8",
+  "MaxNumberMessage": "500",
+  "MaxIdleTime": "600",
+  "DisplayMask": "22"
+}
+</pre>
+</p>
+
+</body>
+</html>

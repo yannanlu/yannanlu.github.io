@@ -1,0 +1,58 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JMXReceiver </B> </FONT>
+</CENTER>
+
+<p>
+JMXReceiver is a JMS message producer that listens to JMX service for various
+notifications.  It adds the content of the notifications into messages and puts
+the messages to the output XQueue.  JMXReceiver supports flow control and
+allows the object control from its owner.  It is fault tolerant with retry and
+idle options.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for JMXReceiver.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Target </TD> <TD> string </TD> <TD> mandatory </TD> <TD> name for MBean or target </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> TextMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> flag for message family </TD> <TD> 1 </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Here is an example of JMXReceiver:
+
+<pre>
+{
+  "Name": "rcvr_n",
+  "ClassName": "org.qbroker.receiver.JMXReceiver",
+  "URI": "tcp://localhost:2506",
+  "Target": "Domain1.brQA01Container:ID=brQA01,category=notification,type=application\\.flowcontrol\\..*",
+  "Operation": "listen",
+  "Username": "qbadm",
+  "Password": "xxxx",
+  "LinkName": "root",
+  "Partition": "0,0",
+  "Capacity": "256",
+  "Mode": "daemon",
+  "XAMode": "0",
+  "TextMode": "1",
+  "DisplayMask": "6"
+}
+</pre>
+</p>
+
+</body>
+</html>

@@ -1,0 +1,135 @@
+<html>
+<head>
+<title>MessageReceiver</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> JMSSubscriber </B> </FONT>
+</CENTER>
+
+<p>
+JMSSubscriber is a JMS message producer that subscribes a JMS Topic. It receives
+JMS messages from the topic and puts them to an internal XQueue as the output.
+JMSSubscriber supports all JMS implentations via JNDI.  Only one operation,
+sub, is supported.  It also supports flow control and XA.  Fault tolerance with
+auto reconnections is built in.
+</p>
+
+<p>
+Even though JMS is a standard, there is no guarantee for a message to behave
+in other vendors' domains. JMSReplyTo is one of the tricky object that is
+vendor specific. Some vendors' implementations of JMSReplyTo are friendly to
+other vendors. Others are not. In the worse scenario, you may wish to drop the
+JMSReplyTo on the message. With JMSSubscriber, you can do that by specifying
+an empty JMSReplyTo in the StringProperty.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for JMSSubscriber.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> ContextFactory </TD> <TD> string </TD> <TD> mandatory for JNDI </TD> <TD> initial context factory for JNDI service </TD> <TD> com.sun.jndi.fscontext.RefFSContextFactory </TD>
+</TR>
+<TR>
+<TD> URLPkgs </TD> <TD> string </TD> <TD> optional </TD> <TD> url pkg prefixes for JNDI </TD> <TD> org.jboss.naming </TD>
+</TR>
+<TR>
+<TD> Principal </TD> <TD> string </TD> <TD> optional </TD> <TD> security pricipal for JNDI </TD> <TD> admin </TD>
+</TR>
+<TR>
+<TD> Credentials </TD> <TD> string </TD> <TD> optional </TD> <TD> security credentials for JNDI </TD> <TD> admin </TD>
+</TR>
+<TR>
+<TD> ConnectionFactoryName </TD> <TD> string </TD> <TD> mandatory for JNDI </TD> <TD> connection factory for JNDI </TD> <TD> TopicConnectionFactory </TD>
+</TR>
+<TR>
+<TD> TopicName </TD> <TD> string </TD> <TD> mandatory </TD> <TD> JMS topic </TD> <TD> topic/notification </TD>
+</TR>
+<TR>
+<TR>
+<TD> ClientID </TD> <TD> string </TD> <TD> mandatory </TD> <TD> id for the client </TD> <TD> client1 </TD>
+</TR>
+<TR>
+<TD> SubscriptionID </TD> <TD> string </TD> <TD> mandatory for durable subs only </TD> <TD> id for durable subscriptions </TD> <TD> sub1 </TD>
+</TR>
+<TD> MessageSelector </TD> <TD> string </TD> <TD> optional </TD> <TD> JMS message selector </TD> <TD> messageType = 6 OR messageType = 8 </TD>
+</TR>
+</TABLE>
+where most of the implementation specific properties are for JNDI service.
+</p>
+
+<p>
+Beside of generic JMS implementations, there is also a dedicate implementation
+for IBM WebSphere MQ.  For IBM WebSphere MQ, here are the vendor-specific
+properties for JMSSubscriber.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> QueueManager </TD> <TD> string </TD> <TD> mandatory for binding mode </TD> <TD> name of the Queue Manager </TD> <TD> BROKER1 </TD>
+</TR>
+<TR>
+<TD> HostName </TD> <TD> string </TD> <TD> mandatory for client mode </TD> <TD> hostname </TD> <TD> broker1 </TD>
+</TR>
+<TR>
+<TD> Port </TD> <TD> integer </TD> <TD> optional </TD> <TD> port number for WMQ </TD> <TD> 1418 (default: 1414) </TD>
+</TR>
+<TR>
+<TD> ChannelName </TD> <TD> string </TD> <TD> optional </TD>
+<TD> name of the MQ SVRCONN channel </TD> <TD> TEST (default: SYSTEM.DEF.SVRCONN) </TD>
+</TR>
+<TR>
+<TD> SecurityExit </TD> <TD> string </TD> <TD> optional </TD> <TD> classname of the securit exit </TD> <TD> org.qbroker.wmq.SimpleSecurityExit </TD>
+</TR>
+<TR>
+<TD> SecurityData </TD> <TD> string </TD> <TD> optional </TD> <TD> argument passed into the securit exit </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> StoreOption </TD> <TD> integer of 0 or 1 </TD> <TD> optional </TD> <TD> store option for subscriptions  </TD> <TD> 0: for queue, 1: for broker </TD>
+</TR>
+<TR>
+<TD> BrokerVersion </TD> <TD> integer of 1 or 2</TD> <TD> optional </TD> <TD> broker version  </TD> <TD> 1 (default: 2) </TD>
+</TR>
+</TABLE>
+where SecurityExit specifies the full classname for WMQ authentications.
+</p>
+
+<p>
+Here is an example of JMSSubscriber:
+
+<pre>
+{
+  "Name": "rcvr_jboss_sub",
+  "ClassName": "org.qbroker.receiver.JMSSubscriber",
+  "URI": "jnp://localhost:1100",
+  "ContextFactory": "org.jnp.interfaces.NamingContextFactory",
+  "URLPkgs": "org.jboss.naming",
+  "ConnectionFactoryName": "ConnectionFactory",
+  "TopicName": "topic/Notification",
+  "Operation": "sub",
+  "MessageSelector": "messageType=6 OR messageType = 8",
+  "ClientID": "quest",
+  "Mode": "daemon",
+  "Username": "guest",
+  "Password": "guest",
+  "EnableExceptionListener": "true",
+  "LinkName": "jboss",
+  "Capacity": "1024",
+  "Partition": "0,0",
+  "XAMode": "0",
+  "DisplayMask": "22",
+  "Tolerance": "0",
+  "MaxRetry": "2"
+}
+</pre>
+</p>
+
+</body>
+</html>

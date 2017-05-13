@@ -1,0 +1,1679 @@
+<html>
+<head>
+<title>QBroker</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> QBroker installation and configuration </B> </FONT> 
+</CENTER>
+<p>
+QBroker is a JMS Message broker that hosts multiple JMS Message Flows. A
+generic JMS Message Flow contains three types of nodes, <b>ReceiverNode</b>,
+<b>PersisterNode</b> and <b>MessageNode</b>. ReceiverNode is to pick up
+messages from various data sources, such as JMS destinations, RDBMS, NoSQL DB,
+and other data services. PersisterNode is to deliver messages to various
+data stores, such as JMS destinations, RDBMS, NoSQL DB, and other data services.
+MessageNode is to process messages for various purposes, such as parsing,
+formating, routing, sorting, selecting, aggregating, etc. A Message Flow
+should have minimum two nodes, a ReceiverNode for picking up JMS Messages and a
+PersisterNode for delivery.  In general, a Message Flow can have multiple
+ReceiverNodes, MessageNodes and PersisterNodes.  All the nodes should be linked
+to at least another node so that the messages can flow from one node to another.
+With all nodes linked together, the Message Flow will process JMS Messages just
+like a production pipeline.
+</p>
+
+<UL>
+<LI> <a HREF="#Overview"> Overview </a></LI>
+<LI> <a HREF="#Installation"> Installation </a></LI>
+<LI> <a HREF="#Configuration"> Configuration </a></LI>
+<LI> <a HREF="#MessageFlows"> MessageFlows </a></LI>
+<LI> <a HREF="#ReceiverNodes"> ReceiverNodes </a></LI>
+<LI> <a HREF="#PersisterNodes"> PersisterNodes </a></LI>
+<LI> <a HREF="#MessageNodes"> MessageNodes </a></LI>
+<LI> <a HREF="#Todo"> Todo List </a></LI>
+</UL>
+
+<a NAME="Overview"></a>
+<h2> Overview </h2>
+<p>
+QBroker can be a Java standalone application container running as a daemon with
+multiple deployed message flows.  It can also run inside a standard webapp
+container such as Tomcat, JBoss, etc. Each message flow is an application that
+consists of the interlinked message nodes, well designed for each category
+of message operations.  Each node is running on a dedicated thread and
+communicates with the linked nodes via the internal queues.  A ReceiverNode has
+the only one link for output.  A PersisterNode has the only one link for input.
+A MessageNode has the only one input link and at least one output link. A given
+link can be shared by multiple nodes with or without partitions.  Those message
+nodes are the building blocks for applications, just like the plastic blocks of
+Lego. Together, they constitute one or several Message Flows.  Each Message Flow
+is also a decision tree for the messages.  QBroker is a container managing all
+message flows.  It also provides monitor services, shared reports, cluster
+support and on-demand reload.
+</p>
+<p>
+There are many popular Java application containers, such as Spring and J2EE.
+Why do we care of QBroker as a Java application container?  Well, the major
+difference is that there is no need to write your Java code in most of common
+scenarios if you use QBroker. Think about a similar case with Apache web server.
+It is well known that there are a lot of Apache modules available.  In most of
+the cases, you just need to download the right modules for your needs and
+configure them for Apache container.  Once tested, you will have a decent web
+server that meets all your needs.  Similarly for QBroker, there are many
+modules available in terms of MessageNode, MessageReceiver and MessagePersister.
+So you can use the avaliable nodes to assemble applications without any coding.
+You just need to figure out what nodes to use and how they are linked together
+to build a MessageFlow for your needs.  The plumbing job is simple, just having
+two linked nodes share the same name of XQueue.  The configuration of each node
+will be a bit of challenge.  The best way to learn is to start with existing
+examples.
+</p>
+<p>
+QBroker is actually a JMS application container.  It hosts multiple JMS
+applications in terms of Message Flows.  Since each flow has multiple nodes,
+QBroker is also the container for those nodes.  Therefore, it is not difficult
+to add new functionalities by developing new nodes.  In fact, QBroker is an
+open source project. If you are interested in the development of QBroker,
+please visit <a HREF="http://github.com/yannanlu/qbroker">GitHub</a>.
+Thanks to the JMS standard, QBroker supports all JMS vendors and their
+implementations.  QBroker runs OK in an environment of mixed JMS
+implementations.  In fact, we are able to run QBroker in a mixed environment
+of WebSphere MQ, WebLogic JMS, SunOne MQ, Open MQ, Glassfish JMS, JBoss MQ,
+JBoss Messaging, Active MQ, Oracle AQ and SonicMQ.  Besides, QBroker provides
+certain services that can be shared by all nodes.  With these shared services,
+any node will be able to correlate its behavior with other non-linked nodes.
+One of the services is MonitorReport instances and their test reports.
+Any node will be able to access the test reports and control the part of flow.
+</p>
+<p>
+Currently, there are two types of containers developed for QBroker project.
+The first one is MonitorAgent hosting multiple message flows. The other is
+QFlow hosting a single message flow. According to the idea of micro-service,
+QFlow will be our focus. From now on, when we talk about the project, the
+term of QBroker will be used. But for any instance of message flow, QFlow will
+be used. The two terms will be interchangeable in the context. Here is an
+example of QFlow instance with one MessageNode, one MessageReceiver and two
+MessagePersisters. It is used to listen to the flow control notifications from
+a SonicMQ broker. The flow will format the data into JSON and persists them to
+a centralized EventCollector.
+</p>
+<IMG VSPACE=10 ALIGN=TOP SRC="flow/QFlow_FCN.jpg" />
+<p>
+QFlow also provides the cluster support as a plug-in, ClusterNode. Currently,
+the ClusterNode has been implemented with Multicast, Unicast and Serial Port
+Communication.  You sure can implement the ClusterNode with other transports,
+like TCP or even JMS.  With the cluster feature configured, you can have
+multiple distributed instances of QFlow to host the same message flows.
+In this way, you can achieve load balance and/or high availability.
+</p>
+<p>
+QFlow is a light-weight JMS application that is fully configurable.  You can
+set up a very complicated flow with many nodes.  Or you can decompose the flow
+into several small flows.  Therefore, you can easily distribute the load across
+CPU processors or machines.  If <a HREF="/console/home.html">WebAdmin</a>
+is available, it can be used to manage the configuration repository for QFlow.
+WebAdmin is powered by javascript at the client side, QFlow at the middle tier
+and PostgreSQL at the backend. It is a web based toolset designed for generic
+applications. For aplications like QFlow, it allows you to manage its
+configuration repository and carry out the routine operation tasks via web
+browsers such as Chrome or Safari.
+</p>
+<p>
+QFlow requires the latest qbroker-1.1.0.jar. The source code is at
+<a href="http://github.com/yannanlu/qbroker">GitHub</a>.
+If any JMS implementation is used, QFlow also requires the vendors' jar files
+and their JNDI services.  If the implementation is not pure Java, you also need
+to add their shared libraries in the library path.  All the tested JMS providers
+are listed <a href="jmsvendor.html"> here </a>. 
+</p>
+
+<a NAME="Installation"></a>
+<H3> Installation</H3>
+<p>
+You can install QBroker on any directories.  QFlow instance can run as any
+user also.  But for a simple installation, we assume the installation directory
+is <B>/opt/qbroker</B> and it is owned by <tt>qbadm:qb</tt>. Since QFlow is a
+part of QBroker, it may be already installed for MonitorAgent.  But if not, it
+is quite simple. If your box has web access to <TT>panda</TT>,
+it will be really simple. You just need to login on the box and run the
+followinig command to have it installed:
+<pre>
+wget -O - http://panda:8082/installQB.sh | sudo bash
+</pre>
+In some cases, the web access to <TT>panda</TT> may not be
+allowed. So you will have to download the tar balls and the installation
+script from <TT>panda</TT>. Then you need to copy them to the
+box for the installation. Here is the procedure with the step-by-step tasks:
+<UL>
+<LI> Run the following commands to download the tarballs to your workstation:
+<pre>
+wget http://panda:8082/qblog.tar.gz
+wget http://panda:8082/qbroker.tar.gz
+wget http://panda:8082/java7.tgz
+wget http://panda:8082/installQB.sh
+</pre>
+</LI>
+<LI> Copy the tar balls and the script to the box you are going to install QBroker.</LI>
+<LI> Login on the box on which you are going to install QBroker.</LI>
+<LI> Cd to the directory with the tar balls and the script.</LI>
+<LI> Run the following command to install:
+<pre>
+sudo bash ./installQB.sh .
+</pre>
+</LI>
+</UL>
+</p>
+
+<a NAME="Configuration"></a>
+<H3>
+Configuration
+</H3>
+<p>
+On the same installation, you can have multiple instances of QFlow configured.
+An instance of QFlow is also called an instance of a message flow. To set up
+a new message flow instance, you will need to complete certain tasks manually.
+First you need to choose a name for the instance.  The name of the instance
+is used to identify the instance.  By the naming convention, the name of the
+instance should be UNIQUE and always in UPPERCASE.  For example, we have the
+names of EVENT for EVENT flow, STATS for STATS flow.  The ID of the instance is
+always <B>QF_<I>NAME</I></B>.
+</p>
+<p>
+The configuration files of QFlow are actually a set of JSON files.  For a
+given instance of NAME, there is a master configuration file in
+<TT>/opt/qbroker/flow/NAME</TT>.  The name of the master configuration file is
+<TT>Flow.json</TT>.  The rest of configuration files live in the same folder.
+If you do not find the directory named after <I>NAME</I>, you need to
+create one and put your configuration files there.  Since QFlow is designed
+as a container and there are many message nodes available, to configure an
+instance of QFlow is just like to play a Lego game.  You just need to
+define each components in their own json files and link them together in the
+master configuration file.
+</p>
+<p>
+Even though it is most challenge to configure each individual components of
+QFlow, you can always copy the files from an existing instance and modify
+them.  If you need help on a specific component, please feel free to ask the
+developers or Yannan Lu.  In case <a HREF="/console/home.html">WebAdmin</a> is
+available, it should be used to manage the configuration repository for QFlow.
+Alternatively, you can also manually create and modify the configuration files.
+</p>
+<p>
+In the master configuration file, the log directory is specified.  You have
+to make sure the directory exists and writeable by the owner.
+You also need to create two startup scripts for your new instance.  The first
+one is <TT>QFlow_<I>NAME</I>.sh</TT> in <TT>/opt/qbroker/bin</TT>.  You
+can copy it from the files of other instances and make necessary changes on
+the ID, the owner, CLASSPATH and directories.  Please make sure all the jar
+files are included in the CLASSPATH. Otherwise, the instance will not start.
+The second script is
+<TT>S50QFlow_<I>NAME</I></TT> in <TT>/opt/qbroker/init.d</TT>.  You can copy
+it from other instances and make necessary changes on the ID and the owner.
+</p>
+<p>
+To start the instance of the QFlow, you should always use the WebAdmin tool.
+Alternatively, you can also run the following command on the box:
+<I>/opt/qbroker/init.d/S50QFlow_<B>NAME</B> start</I>
+where please replace <I><B>NAME</B></I> with the name of the instance.
+</p>
+<p>
+If you are lucky, QFlow's process will be running as a daemon.  Otherwise,
+you need to troubleshoot the problem if it fails to start. Run
+<I>/opt/qbroker/init.d/S50QFlow_<B>NAME</B> status</I> to check if the process
+is running or not. The instance is supposed to log to the file of
+<TT>QFlow_<I>NAME</I>.log</TT> in the log directory specified in the master
+configuration file.  The standard errors will be logged into
+<TT>QFlow_<I>NAME</I>.out</TT>.  They are two excellent sources for
+troubleshooting.
+</p>
+
+<p>
+Here is an example of master configuration file, Flow.json:
+</p>
+<pre>
+{
+  "Name": "Flow",
+  "Site": "DEVOPS",
+  "Type": "QFlow",
+  "Category": "FCN",
+  "Operation": "move",
+  "XAMode": "0",
+  "Capacity": "256",
+  "Mode": "daemon",
+  "LogDir": "/var/log/qbroker",
+  "LogDatePattern": "'.'MM",
+  "ConfigDir": "/opt/qbroker/flow/FCN",
+  "EscalationCapacity": "64",
+  "Heartbeat": "60",
+  "Debug": "49",
+  "MaxNumberFlow": "1",
+  "ConfigRepository": "repository_flow",
+  "AdminServer": {
+    "ClassName": "org.qbroker.receiver.ServerReceiver",
+    "URI": "tcp://localhost:7727",
+    "Operation": "respond",
+    "Capacity": "64",
+    "Partition": "0,32",
+    "EOTBytes": "0x0a",
+    "TextMode": "1",
+    "Template": "##body##\n",
+    "Parser": {
+      "ClassName": "org.qbroker.event.EventParser"
+    },
+    "RestartScript": "/bin/bash -c \"/opt/qbroker/init.d/S50QFlow_FCN restart &\""
+  },
+  "Reporter": [
+    "rpt_global_var"
+  ],
+  "Receiver": [
+    "rcvr_n"
+  ],
+  "Node": [
+    "node_format"
+  ],
+  "Persister": [
+    "pstr_post",
+    "pstr_nohit"
+  ]
+}
+</pre>
+
+<p>
+In the master configuration file above, you will see two parts.  The first
+part is the properties for the container of QFlow itself.  It specifies how
+often to run each of reporter components (heartbeat in second),  where to log
+and where to find other configurations, etc.  The second part lists all the
+ReceiverNodes, PersisterNodes, MessageNodes and Reporters.  The definition
+of each node should be either in the master file or in a separate json file in
+the same folder.
+</p>
+
+<p>
+In this example, we have a flow with one receiver instance to pick up
+messages from the SonicMQ's broker. A format node formats the messages.
+There are two output links on the node. One goes to <B>pstr_post</B> and the
+other goes to <B>pstr_nohit</B>. Those two persister nodes are connected to
+post and nohit, respectively. They channel all messages to their destinations.
+The details will be explained in the examples later.
+</p>
+
+<p>
+<a NAME="AdminServer"></a>
+<H3>
+AdminServer
+</H3>
+<p>
+QFlow supports the remote control and query synchronously via AdminServer.
+In order to enable this feature, you have to define the AdminServer in the
+master configuration file.  AdminServer is a plugin to QFlow for direct
+queries or controls.  If it is defined, the user will be able to query or
+modify the status of the instance of the QFlow directly.  Here is an example
+of the definition:
+</p>
+<PRE>
+{
+  ...
+  "AdminServer": {
+    "ClassName": "org.qbroker.receiver.ServerReceiver",
+    "URI": "tcp://localhost:7727",
+    "Operation": "respond",
+    "Capacity": "64",
+    "Partition": "0,32",
+    "EOTBytes": "0x0a",
+    "TextMode": "1",
+    "Template": "##body##\n",
+    "Parser": {
+      "ClassName": "org.qbroker.event.EventParser"
+    },
+    "RestartScript": "/bin/bash -c \"/opt/qbroker/init.d/S50QFlow_FCN restart &\""
+  },
+  ...
+}
+</PRE>
+where URI is the ServerReceiver's access point, and Operation specifies the
+service for the AdminServer.  The Parser defines the protocol of communication.
+
+<p>
+If you think TCP is too expensive, you can use
+org.qbroker.receiver.PacketReceiver for the AdminServer.  PacketReceiver uses
+UDP and is light-weighted.
+</p>
+
+<p>
+<a NAME="ConfigRepository"></a>
+<H3>
+ConfigRepository
+</H3>
+<p>
+QFlow supports the configuration repository and the on-demand reload via
+ConfigRepository.  If it is configured and enabled, the AdminServer will
+accept requests to reload the configurations from the repository.  This way,
+there is no need to restart or bounce the application in most of common cases.
+Here is an example of the definition for ConfigurationRepository:
+</p>
+<PRE>
+{
+  "Name": "repository_flow",
+  "ClassName": "org.qbroker.monitor.PropertyMonitor",
+  "Site": "DEVOPS",
+  "Category": "WDAP",
+  "Description": "Web JSON Configuration Repository",
+  "Step": "1",
+  "Tolerance": "1",
+  "MaxRetry": "2",
+  "MaxPage": "2",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "2",
+  "URI": "http://panda:8082/flow/FCN/flow.json",
+  "EncryptedAuthorization": "xxxx==",
+  "MaxBytes": "0",
+  "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+\\.\\d+ \\w+)",
+  "DateFormat": "EE, dd MMM yy HH:mm:ss.SSS zz",
+  "Timeout": "60",
+  "IgnoredField": ["LastModified"],
+  "Basename": "Flow",
+  "IncludeGroup": {
+    "ConfigRepository": "",
+    "Flow": ["Receiver", "Node", "Persister", "Reporter"]
+  },
+  "PropertyFile": "/opt/qbroker/flow/FCN/Flow.json",
+  "DependencyGroup": [{
+    "Dependency": [{
+      "Name": "repo_flow",
+      "ClassName": "org.qbroker.monitor.URLMonitor",
+      "URI": "http://panda:8082/flow/FCN/flow.json",
+      "Operation": "HEAD",
+      "EncryptedAuthorization": "xxxx==",
+      "MaxBytes": "0",
+      "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+ \\w+)",
+      "DateFormat": "EE, dd-MMM-yy HH:mm:ss zz",
+      "Timeout": "60",
+      "TimeOffset": "0"
+    }]
+  }],
+  "ActiveTime": {
+    "TimeWindow": [{
+      "Interval": "00:00:00-24:00:00"
+    }]
+  }
+}
+</PRE>
+where URI specifies the repository. This is the definition of the monitor
+object for configuration repository only.  To enable it, you will still need to
+add the reference entry to the master configuration file of the container
+as follows:
+<PRE>
+{
+  ...
+  "ConfigRepository": "repository_flow",
+  ...
+}
+</PRE>
+
+<p>
+The reload works on MessageNode, MessagePersister and MessageReciever. For
+receivers and persisters, the reload will just replace them via instanciations.
+For nodes, the reload process depends on the changes of the nodes. If there is
+changes on the uplink and/or outlinks, the instance will be replaced. Otherwise,
+only the rulesets will be reloaded. On the node level, only changes on Debug,
+DisplayMask and StringProperty will be reloaded in this case.
+</p>
+
+<p>
+<a NAME="ClusterNode"></a>
+<H3>
+ClusterNode
+</H3>
+<p>
+QFlow supports Cluster features via the ClusterNode that is a plugin
+to QFlow for load balance and/or high availability.  To enable this feature,
+you have to define ClusterNode in the master configuration file.
+Here is an example of the definition:
+</p>
+<PRE>
+{
+   ...
+  "ClusterNode": {
+    "Name": "cluster",
+    "URI": "udp://237.10.10.1:12345",
+    "Heartbeat": "10",
+    "SessionTimeout": "30",
+    "MaxGroupSize": "2",
+    "ExtraReceiver": { // extra path for redundancy, optional
+      "Name": "extra",
+      "URI": "udp://237.10.10.1:22345",
+      "Interface": {
+        "panda1": "eth1",
+        "panda2": "eth1"
+      }
+    }
+  },
+  ...
+}
+</PRE>
+where URI defines a Multicast group, and Heartbeat is the interval in second
+for the cluster nodes to exchange heartbeat messages.  The SessionTimeout
+defines how many seconds to wait if there is no heartbeat messages received.
+The MaxGroupSize is the size of the cluster.  ExtraReceiver defines the
+redundant path for inter-node communications.  It is optional.  In case there
+is a crossover cable between two boxes, it will be a good idea to configure
+the ExtraReceiver.
+<p>
+In most of the production scenarios, the cluster needs just two nodes.
+If there are only two nodes required, Unicast cluster is a better choice since
+there is no restrictions on the same subnet as required by Multicast group.
+you can set up a two-node cluster in two separated data centers. Here is an
+example:
+<PRE>
+{
+  ...
+  "ClusterNode": {
+    "Name": "unicast",
+    "ClassName": "org.qbroker.cluster.UnicastNode",
+    "URI": "udp://##hostname##:12345",
+    "Heartbeat": "10",
+    "SessionTimeout": "30",
+    "Member": ["panda1", "loon1"],
+    "ExtraReceiver": { // extra path for redundancy, optional
+      "Name": "observer",
+      "URI": "wmq://panda2:1414",
+      "QueueName": "OBSERVER",
+      "MessageSelector": {
+        "panda1": "JMSType='loon1'",
+        "loon1": "JMSType='panda1'"
+      }
+    }
+  },
+  ...
+}
+</PRE>
+where the two nodes are running on two different Data Centers, respectively.
+They communicate with each other via Unicast UDP packets.
+It is well known that two-node cluster sharing the only one communication path
+is not stable at all. If the only communication path breaks, there will be two
+masters. To enhance the reliability and stability, the extra communication
+path is configured in this example. As you can see, both nodes share the same
+JMS queue, OBSERVER, in the first Data Center. As long as either path is up, the
+inter-node communications will always be OK. In real production scenarios,
+it is recommended to set up a VIP on two nodes for the observer.
+</P>
+
+<p>
+<a NAME="reporters"></a>
+<H3> Reporters</H3>
+<p>
+A reporter is a MonitorAgent component without actions. Container will update
+the shared report with the result. To learn about MonitorAgent, you may check
+this link, <a HREF="agent.html">MonitorAgent</a>.
+</p>
+<p>
+Here is a example for QueueMonitor:
+<pre>
+{
+  "Name": "panda1_q",
+  "ClassName": "org.qbroker.wmq.QueueMonitor",
+  "Site": "DEVOPS",
+  "Category": "QBROKER",
+  "Description": "JMS Queue monitor",
+  "URI": "wmq://panda1",
+  "QueueName": "DATA_IN",
+  "WaterMark": "20000"
+}
+</pre>
+Since there is no action associated with the reporter, there is no need to
+define an ActiveTime for the TimeWindows.
+</p>
+
+<p>
+Another example of Reporter is to set global variables via the static report
+for the container:
+<pre>
+{
+  "Name": "global_var",
+  "ClassName": "org.qbroker.monitor.StaticReport",
+  "Site": "DEVOPS",
+  "Type": "StaticReport",
+  "Category": "STATIC",
+  "Description": "define a set of globals for message flows",
+  "Step": "1",
+  "ReportName": "GlobalProperties",
+  "ReportClass": "org.qbroker.flow.QFlow",
+  "StringProperty": {
+    "hostname": "##hostname##",
+    "HOSTNAME": "##HOSTNAME##",
+    "Repos_URL": "http://localhost:8082",
+    "Template": "${hostname} ${HOSTNAME} ${Repos_URL}"
+  }
+}
+</pre>
+where it defines a set of global variables for QFlow container at the startup.
+Therefore, all the nodes in the container will be able to resolve those global
+variables, such as <b>${hostname}</b>, in their instanciation stage. It is
+really helpful if you are trying to deploy the same set of configuration files
+to multiple environments. You just only need to update global_var.json. In
+fact, StaticReport is also able to pick up environment variables. Here is an
+example:
+<pre>
+{
+  "Name": "env_var",
+  "ClassName": "org.qbroker.monitor.StaticReport",
+  "Site": "DEVOPS",
+  "Type": "StaticReport",
+  "Category": "STATIC",
+  "Description": "define a set of globals for message flows",
+  "Step": "1",
+  "ReportName": "GlobalProperties",
+  "ReportClass": "org.qbroker.flow.QFlow",
+  "EnvironmentVariable": {
+    "Scope": "DEV",
+    "Repos_URL": "tcp://localhost:8082",
+    "Policy": ""
+  },
+  "StringProperty": {
+    "hostname": "##hostname##",
+    "HOSTNAME": "##HOSTNAME##",
+    "Template": "${hostname} ${HOSTNAME} ${Repos_URL} ${Scope} ${Policy}"
+  }
+}
+</pre>
+where it defines a map with the keys and the default values. It will try to
+pick up the values for each of the keys as the environment variables. So those
+keys and the values are supposed to be defined in the command line for the JVM
+with something like, <TT> -DScope=PROD </TT>. If any one is not defined, the
+default value will be used.
+</p>
+
+<p>
+<a NAME="MessageFlows"></a>
+<H3> MessageFlows </H3>
+</p>
+
+<p>
+MessageFlow is the core of QBroker.  It is the representation in terms of the
+workflow for applications.  Here is the list of message flows with flow charts
+and the brief descriptions:
+
+<table border=1>
+<tr>
+<th>Name</th><th>JPG</th><th>Visio</th><th>Description</th>
+</tr>
+<tr>
+<td>CONSOLE</td><td><a href="flow/CONSOLE.jpg">CONSOLE.jpg</a></td><td><a href="flow/CONSOLE.vsd">CONSOLE.vsd</a></td><td>workflow for WebAdmin</td>
+</tr>
+<tr>
+<td>STATS</td><td><a href="flow/QFlow_STATS.jpg">QFlow_STATS.jpg</a></td><td><a href="flow/QFlow_STATS.vsd">QFlow_STATS.vsd</a></td><td>workflow for MonitorAgent stats feeds</td>
+</tr>
+<tr>
+<td>EVENT</td><td><a href="flow/QFlow_EVENT.jpg">QFlow_EVENT.jpg</a></td><td><a href="flow/QFlow_EVENT.vsd">QFlow_EVENT.vsd</a></td><td>message flow for MonitorAgent events</td>
+</tr>
+<tr>
+<td>FCN</td><td><a href="flow/QFlow_FCN.jpg">QFlow_FCN.jpg</a></td><td><a href="flow/QFlow_FCN.vsd">QFlow_FCN.vsd</a></td><td>message flow for SonicMQ's flow-control notifications</td>
+</tr>
+<tr>
+<td>ID</td><td><a href="flow/QFlow_ID.jpg">QFlow_ID.jpg</a></td><td><a href="flow/QFlow_ID.vsd">QFlow_ID.vsd</a></td><td>message flow for event id service</td>
+</tr>
+</table>
+We do not have full documentation for most of message flows yet.
+</p>
+
+<p>
+Here is the list of steps to set up a new message flow on a box hosting
+the flow:
+</p>
+<ul>
+<li> log on the box and switch to the owner of QBroker </li>
+<li> make sure QBroker is installed on the box. If it is not installed yet,
+please have it installed first</li>
+<li> select a unique name for the message flow in upper case. Say it is MYFLOW.
+</li>
+<li> cd to <tt>/opt/qbroker/bin</tt>, and copy an existing start up script
+to the new script. For example, if the existing script is
+<tt>QFlow_STATS.sh</tt>, you can run the following command to make the copy:
+<pre>
+cp QFlow_STATS.sh QFlow_MYFLOW.sh
+</pre>
+</li>
+<li> open the file of <tt>QFlow_MYFLOW.sh</tt>, locate the line of
+<tt>ID=XXXX</tt>. Change it value to something like <tt>ID=MYFLOW</tt>.</li>
+<li> make sure java path is right. If it is not, make the neccessary changes.</l
+i>
+<li> make sure CLASSPATH is right and includes all the jar files. If not,
+make the neccessary changes. If you have new JMS implementations, please
+make sure they are included in the CLASSPATH.</li>
+<li> cd to <tt>/opt/qbroker/init.d</tt>, and copy an existing start up script
+to the new script. For example, if the existing script is
+<tt>S50QFlow_STATS</tt>, you can run the following command to make the copy:
+<pre>
+cp S50QFlow_STATS S50QFlow_MYFLOW
+</pre>
+</li>
+<li> open the file of <tt>S50QFlow_MYFLOW</tt>, locate the line of
+<tt>ID=XXXX</tt>. Change it value to something like <tt>ID=MYFLOW</tt>.</li>
+</ul>
+<p>
+Once the message flow is set up on the box, you can use WebAdmin to configure
+the message flow and deploy the configurations to the box.
+</p>
+
+<p>
+<a NAME="ReceiverNodes"></a>
+<H3> ReceiverNodes </H3>
+</p>
+
+<p>
+MessageReceiver is a message producer.  It picks up data from the given data
+source specified by URI.  The data will be converted into JMS messages if the
+data source is neither a JMS Queue nor a JMS Topic.  The incoming messages will
+be put into the internal XQueue, specified by LinkName.  Therefore, the
+linked MessageNodes will be able to process them based on the business rules.
+</p>
+<p>
+The configuration of MessageReceiver is easy. The developers of each
+MessageReceiver implementations are supposed to document it in detail.
+Currently, there are 15 implementations of MessageReceiver available.
+Their javadoc is
+<a href="/javadoc/org/qbroker/receiver/package-summary.html">here</a>.
+For configuations, here is the list of them with brief descriptions.
+Currently, there are 15 implementations of MessageReceiver available.
+Here is the list with brief description.
+</p>
+<TABLE border="1">
+<TR><TH>Receiver</TH><TH>ClassName</TH><TH>Description</TH></TR>
+<TR>
+<TD> <a HREF="receiver/DocumentReceiver.html"> DocumentReceiver </a></TD>
+<TD>org.qbroker.receiver.DocumentReceiver</TD>
+<TD>DocumentReceiver monitors a document-oriented database and retrieves the documents from it via a query</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/FileReceiver.html"> FileReceiver </a></TD>
+<TD>org.qbroker.receiver.FileReceiver</TD>
+<TD>FileReceiver monitors on a file, or a web page on a server and retrieves the content from it</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/HeartbeatGenerator.html"> HeartbeatGenerator </a></TD>
+<TD>org.qbroker.receiver.HeartbeatGenerator</TD>
+<TD>Heartbeator periodically generates time sequence events of JMS messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/JDBCReceiver.html"> JDBCReceiver </a></TD>
+<TD>org.qbroker.receiver.JDBCReceiver</TD>
+<TD>JDBCReceiver monitors a JDBC data source and retrieves the records from it via a query</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/JMSReceiver.html"> JMSReceiver </a></TD>
+<TD>org.qbroker.receiver.JMSReceiver</TD>
+<TD>JMSReceiver listens on a JMS Queue and receives JMS messages from it</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/JMSSubscriber.html"> JMSSubscriber </a></TD>
+<TD>org.qbroker.receiver.JMSSubscriber</TD>
+<TD>JMSSubscriber subscribes on a JMS Topic and receives JMS messages on it</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/JMXReceiver.html"> JMXReceiver </a></TD>
+<TD>org.qbroker.receiver.JMXReceiver</TD>
+<TD>JMXReceiver listens to JMX notifications from a JMX service</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/LogReceiver.html"> LogReceiver </a></TD>
+<TD>org.qbroker.receiver.LogReceiver</TD>
+<TD>LogReceiver listens on a log file and fetches all new entries as the messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/LogScissor.html"> LogScissor </a></TD>
+<TD>org.qbroker.receiver.LogScissor</TD>
+<TD>LogScissor periodically monitors the size of a remote logfile and renames the file into a new name with a sequentical id for retrieving</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/PacketReceiver.html"> PacketReceiver </a></TD>
+<TD>org.qbroker.receiver.PacketReceiver</TD>
+<TD>PacketReceiver listens to a UDP socket and receives packets from it</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/QServlet.html"> QServlet </a></TD>
+<TD>org.qbroker.flow.QServlet</TD>
+<TD>QServlet serves HTTP requests for a flow</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/RMQReceiver.html"> RMQReceiver </a></TD>
+<TD>org.qbroker.receiver.RMQReceiver</TD>
+<TD>RMQReceiver listens to a RabbitMQ queue and receives messages from it</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/RedisReceiver.html"> RedisReceiver </a></TD>
+<TD>org.qbroker.receiver.RedisReceiver</TD>
+<TD>RedisReceiver listens to a Redis list or channel and receives messages from it</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/ServerListener.html"> ServerListener </a></TD>
+<TD>org.qbroker.receiver.ServerListener</TD>
+<TD>ServerListener listens to a ServerSocket and accepts socket connections from it for various services</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/ServerReceiver.html"> ServerReceiver </a></TD>
+<TD>org.qbroker.receiver.ServerReceiver</TD>
+<TD>ServerReceiver listens to a ServerSocket and accepts socket connections from it. It then receives byte streams from the socket</TD>
+</TR>
+<TR>
+<TD> <a HREF="receiver/StreamReceiver.html"> StreamReceiver </a></TD>
+<TD>org.qbroker.receiver.StreamReceiver</TD>
+<TD>StreamReceiver listens to an InputStream and receives byte stream from it</TD>
+</TR>
+</TABLE>
+
+<p>
+The task to configure an instance of MessageReceiver is pretty challenge,
+simply because there are many different properties for each implementation.
+The best practice is to find an example and start to modify it.  However, most
+of the properties are COMMON.  Others are implementation specific.  Among the
+common properties, some of them are mandatory.  Others are optional.  Here is
+the table listing all the common properties:
+</p>
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the receiver </TD> <TD> rcvr_qb </TD>
+</TR>
+<TR>
+<TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD>
+<TD> full classname of the implementation </TD> <TD> org.qbroker.receiver.JMSRecevier </TD>
+</TR>
+<TR>
+<TD> URI </TD> <TD> URL string </TD> <TD> mandatory </TD> <TD> URI of the message source </TD> <TD> wmq://broker1 </TD>
+</TR>
+<TR>
+<TD> Username </TD> <TD> string </TD> <TD> optional </TD> <TD> username for connection </TD> <TD> guest </TD>
+</TR>
+<TR>
+<TD> Password </TD> <TD> string </TD> <TD> optional </TD> <TD> password for connection </TD> <TD> guest </TD>
+</TR>
+<TR>
+<TD> Operation </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> operation of the receiver </TD> <TD> get </TD>
+</TR>
+<TR>
+<TD> LinkName </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the internal XQueue for output </TD> <TD> root </TD>
+</TR>
+<TR>
+<TD> Capacity </TD> <TD> integer </TD> <TD> optional </TD> <TD> capacity of the internal XQueue </TD> <TD> 128 (default value is determined by the linked node) </TD>
+</TR>
+<TR>
+<TD> Partition </TD> <TD> string of two numbers separated by a comma </TD> <TD> optional </TD> <TD> partition of the internal XQueue </TD> <TD> 0,8 (default: determined by container) </TD>
+</TR>
+<TR>
+<TD> Mode </TD> <TD> string of deamon or utility </TD> <TD> optional </TD> <TD> mode for deamon or utility </TD> <TD> deamon (default: utility) </TD>
+</TR>
+<TR>
+<TD> XAMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> on/off transcation control </TD> <TD> 1 (default: 1 for on) </TD>
+</TR>
+<TR>
+<TD> TextMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> what message family to create for non-JMS data source only </TD> <TD> 0 (default: 1 for TextMessages) </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> the mask controls what to log on the incoming messages </TD> <TD> 6 (default: 0) </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on incoming messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> ReceiveTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for receive </TD> <TD> 500 (default: 1000) </TD>
+</TR>
+<TR>
+<TD> MaxNumberMessage </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of messages to receive </TD> <TD> 0 (default: 0 for no limit) </TD>
+</TR>
+<TR>
+<TD> Timeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for retry sessions </TD> <TD> 1000 (default: 2000) </TD>
+</TR>
+<TR>
+<TD> PauseTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for retries </TD> <TD> 2000 (default: 5000) </TD>
+</TR>
+<TR>
+<TD> StanbyTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for standby </TD> <TD> 10000 (default: 15000) </TD>
+</TR>
+<TR>
+<TD> Tolerance </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of times of retries without reconnection  </TD> <TD> 1 (default: 2) </TD>
+</TR>
+<TR>
+<TD> MaxRetry </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of times of reconnection in a session </TD> <TD> 1 (default: 1) </TD>
+</TR>
+<TR>
+<TD> QuietPeriod </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of times of retry without logging </TD> <TD> 2 (default: 4) </TD>
+</TR>
+</TABLE>
+
+where Partition contains two numbers and defines the range of cells in a given
+XQueue.  The first number is the index or the id for the beginning cell of the
+XQueue.  The 2nd number is the number of cells in the partition.  So the
+Partition of 4,6 means the 6 cells from cell 4 through cell 9.  Therefore,
+Partition determines the share of the output XQueue.  A message flow may have
+more than one receivers sharing the same output XQueue.  The sharing mode can
+be either exclusive or inclusive.  If the output XQueue is not named after root,
+and the XAMode of a receiver is 0, the explicitly defined partition of 0,0
+means the receiver may use any cell of the XQueue.  If there are more than one
+receivers sharing the same non-root XQueue and having 0,0 as the partition,
+they will share all cells of the same XQueue inclusively.  This is only case
+of inclusive sharing.  If no Partition is defined, as by default, the container
+will assign a CellID to each receiver based on their position in the list and
+the name of the XQueue.  In this case, the receiver will use the assigned cell
+exclusively.
+
+<p>
+Here is an example of JMSReceiver:
+<pre>
+{
+  "Name": "rcvr_qb",
+  "ClassName": "org.qbroker.receiver.JMSReceiver",
+  "URI": "wmq://broker1",
+  "QueueName": "QB_IN",
+  "Operation": "get",
+  "LinkName": "root",
+  "Mode": "daemon",
+  "XAMode": "1",
+  "DisplayMask": "0",
+  "StringProperty": {
+    "Hostname": "broker1"
+  }
+}
+</pre>
+where Mode is explicitly set to <b>daemon</b> so that the receiver keeps
+listening on the queue forever. XAMode controls the transaction of messages
+as long as the source supports it.  If it is set to 1, the received messages
+must be acknowledged by their persisters.  If XAMode is set to 0, all the
+received messages will be auto acknowledged by the receiver. DisplayMode
+controls what to display on received messages in the log. StringProperty
+contains name and value pairs for setting properties on the incoming messages.
+</p>
+
+<p>
+If certain global variables are defined in the container, they can be used
+in the configuration of receivers. By default, <b>URI</b> and <b>LinkName</b>
+support the global variables. A global variable is something like:
+<b>${xxx}</b> where <b>xxx</b> is the name of the global variable. During
+the instanciation of the receiver, all the global variables will be resolved
+as long as they are defined in the container. One of the usages of global
+variables is to define host specific environment variables.
+</p>
+
+<p>
+QFlow, as a container, supports the simple template that contains only one
+place holder for a group of similar receivers. In this case, all the receivers
+in the same group share the same template that will be used to generate the
+real copy of configuration for each of the receiver. A receiver template is
+just a configuration with a single variable such as <b>##yyy##</b>. Since the
+name of the receiver instance has to be listed in the container, that name will
+be generated from a template on a list of values for the place holder. Here is
+an example of <tt>queue_in</tt>:
+</p>
+<pre>
+{
+  "Name": "rcvr_queue",
+  "ClassName": "org.qbroker.receiver.JMSReceiver",
+  "URI": "${msgURI}",
+  "QueueName": "##queue##",
+  "LinkName": "root",
+  "Operation": "get",
+  "DisplayMask": "18",
+  "Mode": "daemon",
+  "XAMode": "1",
+  "Tolerance": "0",
+  "MaxRetry": "2"
+}
+</pre>
+where <b>##queue##</b> is the place holder, and <b>${msgURI}</b> the global
+variable. In the master configuration, Flow.json, we have
+<pre>
+{
+  ...
+  "Receiver": [{
+    "Name": "rcvr_queue",
+    "Template": "rcvr_##queue##",
+    "Item": [
+      "aa",
+      "bb",
+      "cc",
+      "bkr"
+    ]
+  },
+  ...
+}
+</pre>
+where <b>Name</b> references the receiver template, <tt>rcvr_queue</tt>,
+<b>Template</b> defines the template for the name of the receiver,
+and <b>Item</b> lists the value of the place holder for rcvr_queue.json.
+With the only one receiver template, therefore, we have defined 4 different
+receivers. Among them, the first receiver has the name of <b>rcvr_aa</b>. All
+the receivers share the same <b>URI</b> that will be resolved by the global
+variable of <b>${msgURI}</b>.
+
+<p>
+To view examples and manuals on other receiver nodes, please click on the name
+on the receiver list.
+</p>
+
+<a NAME="PersisterNodes"></a>
+<p>
+<H3> PersisterNodes </H3>
+<p>
+MessagePersister is a message consumer.  It picks up messages from the internal
+XQueue specified by LinkName.  Then it delivers them to the given data store
+specified by URI.  The content of the messages will be delivered if the data
+store is a JMS destination. Therefore, the messages processed by the flow will
+be able to be persisted to their data store.
+</p>
+<p>
+The configuration of MessagePersister is easy. The Developers of each
+MessagePersister implementations are supposed to document it in detail.
+Currently, there are 18 implementations of MessagePersister available.
+Their javadoc is
+<a href="/javadoc/org/qbroker/persister/package-summary.html">here</a>.
+For configuations, here is the list of them with brief descriptions.
+</p>
+<TABLE border="1">
+<TR><TH>Persister</TH><TH>ClassName</TH><TH>Description</TH></TR>
+<TR>
+<TD> <a HREF="persister/DocumentPersister.html"> DocumentPersister </a></TD>
+<TD>org.qbroker.persister.DocumentPersister</TD>
+<TD>DocumentPersister updates a document-oriented database via the content of the messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/EventPersister.html"> EventPersister </a></TD>
+<TD>org.qbroker.persister.EventPersister</TD>
+<TD>EventPersister invokes actions upon the events</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/FilePersister.html"> FilePersister </a></TD>
+<TD>org.qbroker.persister.FilePersister</TD>
+<TD>FilePersister stores messages into local or remote files</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/JDBCPersister.html"> JDBCPersister </a></TD>
+<TD>org.qbroker.persister.JDBCPersister</TD>
+<TD>JDBCPersister updates a JDBC data source based on the content of the messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/JMSPersister.html"> JMSPersister </a></TD>
+<TD>org.qbroker.persister.JMSPersister</TD>
+<TD>JMSPersister puts messages to a JMS queue</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/JMSPublisher.html"> JMSPublisher </a></TD>
+<TD>org.qbroker.persister.JMSPublisher</TD>
+<TD>JMSPublisher publishes messages on a JMS Topic</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/JMXPersister.html"> JMXPersister </a></TD>
+<TD>org.qbroker.persister.JMXPersister</TD>
+<TD>JMXPersister queries JMS Destination info/metrics on a JMX server </TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/JobPersister.html"> JobPersister </a></TD>
+<TD>org.qbroker.persister.JobPersister</TD>
+<TD>JobPersister persists long running messages as jobs </TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/LogPersister.html"> LogPersister </a></TD>
+<TD>org.qbroker.persister.LogPersister</TD>
+<TD>LogPersister appends messages into a logfile</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/MessageEvaluator.html"> MessageEvaluator </a>
+<TD>org.qbroker.persister.MessageEvaluator</TD>
+<TD>MessageEvaluator evaluates Messages according to predefined rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/MonitorPersister.html"> MonitorPersister </a></TD>
+<TD>org.qbroker.persister.MonitorPersister</TD>
+<TD>MonitorPersister invokes reports and actions</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/PacketPersister.html"> PacketPersister </a></TD>
+<TD>org.qbroker.persister.PacketPersister</TD>
+<TD>PacketPersister sends the content of the messages to a UDP socket</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/PersisterPool.html"> PersisterPool </a></TD>
+<TD>org.qbroker.persister.PersisterPool</TD>
+<TD>PersisterPool manages multiple pools of on-demand persisters</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/RMQPersister.html"> RMQPersister </a></TD>
+<TD>org.qbroker.persister.RMQPersister</TD>
+<TD>RMQPersister publishes JMS messages with certain keys to a RabbitMQ exchange</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/ReceiverPool.html"> ReceiverPool </a></TD>
+<TD>org.qbroker.persister.ReceiverPool</TD>
+<TD>ReceiverPool manages multiple pools of on-demand receivers</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/RedisPersister.html"> RedisPersister </a></TD>
+<TD>org.qbroker.persister.RedisPersister</TD>
+<TD>RedisPersister publishes content of JMS messages with certain keys to a Redis list or channel</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/ServerPersister.html"> ServerPersister </a></TD>
+<TD>org.qbroker.persister.ServerPersister</TD>
+<TD>ServerPersister listens on a ServerSocket and accepts the socket connections from it</TD>
+</TR>
+<TR>
+<TD> <a HREF="persister/StreamPersister.html"> StreamPersister </a></TD>
+<TD>org.qbroker.persister.StreamPersister</TD>
+<TD>StreamPersister writes the content of messages to an OutputStream</TD>
+</TR>
+</TABLE>
+
+<p>
+The task to configure an instance of MessagePersister is pretty challenge,
+simply because there are many different properties for each implementation.
+The best practice is to find an example and start to modify it.  However, most
+of the properties are COMMON.  Others are implementation specific.  Among the
+common properties, some of them are mandatory.  Others are optional.  Here is
+the table listing all the common properties:
+</p>
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the persister </TD> <TD> pstr_q </TD>
+</TR>
+<TR>
+<TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD>
+<TD> full classname of the implementation </TD> <TD> org.qbroker.persister.JMSPersister </TD>
+</TR>
+<TR>
+<TD> URI </TD> <TD> URL string </TD> <TD> mandatory </TD> <TD> URI of the message destination </TD> <TD> wmq://broker1 </TD>
+</TR>
+<TR>
+<TD> Username </TD> <TD> string </TD> <TD> optional </TD> <TD> username for connection </TD> <TD> guest </TD>
+</TR>
+<TR>
+<TD> Password </TD> <TD> string </TD> <TD> optional </TD> <TD> password for connection </TD> <TD> guest </TD>
+</TR>
+<TR>
+<TD> Operation </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> operation of the persister </TD> <TD> put </TD>
+</TR>
+<TR>
+<TD> LinkName </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the internal XQueue for input </TD> <TD> root </TD>
+</TR>
+<TR>
+<TD> Capacity </TD> <TD> integer </TD> <TD> optional </TD> <TD> capacity of the internal XQueue </TD> <TD> 128 (default value is determined by the linked node or container) </TD>
+</TR>
+<TR>
+<TD> XAMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> on/off transcation control </TD> <TD> 1 (default: 1 for on) </TD>
+</TR>
+<TR>
+<TD> MaxIdleTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of seconds to disconnect if idled for too long </TD> <TD> 600 (default: 0 for off) </TD>
+</TR>
+<TR>
+<TD> MaxNumberMessage </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of messages to persist </TD> <TD> 0 (default: 0 for no limit) </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> the mask controls what to log on the outgoing messages </TD> <TD> 6 (default: 0) </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> controls what properties to log on the outgoing messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> WaitTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for receive </TD> <TD> 500 (default: 1000) </TD>
+</TR>
+<TR>
+<TD> Timeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for retry sessions </TD> <TD> 1000 (default: 2000) </TD>
+</TR>
+<TR>
+<TD> PauseTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for retries </TD> <TD> 2000 (default: 5000) </TD>
+</TR>
+<TR>
+<TD> StanbyTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for standby </TD> <TD> 10000 (default: 15000) </TD>
+</TR>
+<TR>
+<TD> Tolerance </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of times of retries without reconnection  </TD> <TD> 1 (default: 2) </TD>
+</TR>
+<TR>
+<TD> MaxRetry </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of times of reconnection in a session </TD> <TD> 1 (default: 1) </TD>
+</TR>
+<TR>
+<TD> QuietPeriod </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of times of retry without logging </TD> <TD> 2 (default: 4) </TD>
+</TR>
+</TABLE>
+
+<p>
+Here is an example of JMSPersister:
+<pre>
+{
+  "Name": "pstr_esb",
+  "ClassName": "org.qbroker.persister.JMSPersister",
+  "URI": "wmq://panda",
+  "QueueName": "ESB",
+  "Operation": "put",
+  "LinkName": "esb",
+  "XAMode": "1",
+  "DisplayMask": "6",
+  "StringProperty": {
+    "Hostname": ""
+  }
+}
+</pre>
+where XAMode controls the transaction of messages as long as the destination
+supports it.  If it is set to 1, after the delivery the messages must be
+committed by the persister.  DisplayMode controls what to display on persisted
+messages in the log.
+</p>
+
+<p>
+If certain global variables are defined in the container, they can be used
+in the configuration of persisters. By default, <b>URI</b> and <b>LinkName</b>
+support the global variables. A global variable is something like:
+<b>${xxx}</b> where <b>xxx</b> is the name of the global variable. During
+the instanciation of the persister, all the global variables will be resolved
+as long as they are defined in the container. One of the usages of global
+variables is to define host specific environment variables.
+</p>
+
+<p>
+QFlow, as a container, supports the simple template that contains only one
+place holder for a group of similar persisters. In this case, all the persisters
+in the same group share the same template that will be used to generate the
+real copy of configuration for each of the persister. A persister template is
+just a configuration with a single variable such as <b>##yyy##</b>. Since the
+name of the persister instance has to be listed in the container, that name will
+be generated from a template on a list of values for the place holder. Here is
+an example of <tt>pstr_queue</tt>:
+</p>
+<pre>
+{
+  "Name": "pstr_queue",
+  "ClassName": "org.qbroker.persister.JMSPersister",
+  "URI": "${msgURI}",
+  "QueueName": "##queue##",
+  "Operation": "put",
+  "LinkName": "##queue##",
+  "XAMode": "1",
+  "Persistence": "1",
+  "DisplayMask": "22",
+  "Tolerance": "0",
+  "MaxRetry": "2"
+}
+</pre>
+where <b>##queue##</b> is the place holder, and <b>${msgURI}</b> the global
+variable. In the master configuration, Flow.json, we have
+<pre>
+{
+  ...
+  "Persister": [{
+    "Name": "pstr_queue",
+    "Template": "pstr_##queue##",
+    "Item": [
+      "abc",
+      "xyz",
+      "nohit"
+    ]
+  },
+  ...
+}
+</pre>
+where <b>Name</b> references the persister template, <tt>queue_out</tt>,
+<b>Template</b> defines the template for the name of the persister,
+and <b>Item</b> lists the value of the place holder for queue_out.xml.
+With the only one persister template, therefore, we have defined 3 different
+persisters. Among them, the first persister has the name of <b>pstr_abc</b>.
+All the receivers share the same <b>URI</b> that will be resolved by the global
+variable of <b>${msgURI}</b>.
+
+<p>
+To view examples and manuals on other persister nodes, please click on the name
+on the persister list.
+</p>
+
+<a NAME="MessageNodes"></a>
+<p>
+<H3> MessageNodes </H3>
+
+<p>
+MessageNode is a process unit on messages in a message flow.  It has one
+intput XQueue, specified by LinkName, and multiple output XQueues listed by
+OutLink. It picks up JMS messages from the input queue and processes them
+according to the content and rulesets.  Once it is done with a message, the
+node will propagate the message to the proper output XQueue.  This way, the
+messages are able to flow through the nodes along the flow as designed.
+</p>
+<p>
+A MessageNode may contain a number of predefined rulesets.  A ruleset has a
+message filter that contains certain Perl5 patterns used to match the content
+of the messages. The filter is used to select messages for the ruleset.
+Therefore, the incoming messages are categorized into non-overlapping groups.
+Each ruleset has its own unique message group to process.  The ruleset also
+specifies certain operations and/or the association with the outlinks. When
+a message is picked up by the node, the node will apply each filter one by one
+on the message to see which filter gets a hit. In most cases, the ruleset with
+the first hit will be applied on the message. If none of the rulesets hits,
+the default NOHIT ruleset will be applied.  In fact, MessageNode always adds
+an extra ruleset for nohit messages. This nohit ruleset always has the id of 0.
+In another word, MessageNode is also a decision point in the decision tree
+for messages. It contains multiple branches and out paths.
+</p>
+<p>
+The configuration of MessageNode is kind of challenge. The developers of each
+MessageNode implementations are supposed to document it in detail. Currently,
+there are 32 implementations of MessageNode available. Their javadoc is
+<a href="/javadoc/org/qbroker/node/package-summary.html">here</a>.
+For configuations, here is the list of them with brief descriptions.
+</p>
+<TABLE border="1">
+<TR><TH>Node</TH><TH>ClassName</TH><TH>Description</TH></TR>
+<TR>
+<TD> <a HREF="node/ActionNode.html"> ActionNode </a></TD>
+<TD>org.qbroker.node.ActionNode</TD>
+<TD>ActionNode processes incoming JMS messages and takes the predefined actions according to the rulesets and the content of the incoming messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/AggregateNode.html"> AggregateNode </a></TD>
+<TD>org.qbroker.node.AggregateNode</TD>
+<TD>AggregateNode aggregates JMS messages according to their content and the predefined rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/CacheNode.html"> CacheNode </a>
+<TD>org.qbroker.node.CacheNode</TD>
+<TD>CacheNode caches responses for Messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/CascadeNode.html"> CascadeNode </a>
+<TD>org.qbroker.node.CascadeNode</TD>
+<TD>CascadeNode evaluates messages with cascading rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/CollectNode.html"> CollectNode </a></TD>
+<TD>org.qbroker.node.CollectNode</TD>
+<TD>CollectNode assigns messages to various destinations as the requests according to their content and preconfigured rulesets, and then collects them</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/DeliverNode.html"> DeliverNode </a></TD>
+<TD>org.qbroker.node.DeliverNode</TD>
+<TD>DeliverNode delivers JMS messages with various URIs to the on-demand destinations</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/DispatchNode.html"> DispatchNode </a></TD>
+<TD>org.qbroker.node.DispatchNode</TD>
+<TD>DispatchNode dispatches JMS messages to various destinations according to their content, and preconfigured rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/DistinguishNode.html"> DistinguishNode </a></TD>
+<TD>org.qbroker.node.DistinquishNode</TD>
+<TD>DistinquishNode filters out the duplicated JMS messages based on the unique
+keys and only delivers the distinct messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/DuplicateNode.html"> DuplicateNode </a></TD>
+<TD>org.qbroker.node.DuplicateNode</TD>
+<TD>DuplicateNode duplicates JMS messages to multiple destinations</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/EventCorrelator.html"> EventCorrelator </a>
+<TD>org.qbroker.node.EventCorrelator</TD>
+<TD>EventCorrelator correlates Messages according to predefined rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/EventDispatcher.html"> EventDispatcher </a>
+<TD>org.qbroker.node.EventDispatcher</TD>
+<TD>EventDispatcher dispatches Messages according to predefined rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/EventMonitor.html"> EventMonitor </a>
+<TD>org.qbroker.node.EventMonitor</TD>
+<TD>EventMonitor keeps tracking Messages according to predefined rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/FormatNode.html"> FormatNode </a></TD>
+<TD>org.qbroker.node.FormatNode</TD>
+<TD>FormatNode formats JMS Message body and header fields according to rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/FreeMarkerNode.html"> FreeMarkerNode </a></TD>
+<TD>org.qbroker.node.FreeMarkerNode</TD>
+<TD>FreeMarkerNode retrieves the data model from the incoming JMS message and applies a FreeMarker template to it. The result will be set to the message body</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/JobNode.html"> JobNode </a></TD>
+<TD>org.qbroker.node.JobNode</TD>
+<TD>JobNode manages and schedules various jobs</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/JSONPathNode.html"> JSONPathNode </a></TD>
+<TD>org.qbroker.node.JSONPathNode</TD>
+<TD>JSONPathNode parses JSON payload of JMS TextMessages, retrieves data from the JSON payload according to the predefined JSONPath expressions. It then sets them into message as the properties</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/JSONTNode.html"> JSONTNode </a></TD>
+<TD>org.qbroker.node.JSONTNode</TD>
+<TD>JSONTNode formats JSON payload of JMS Messages according to the predefined JSON Template or scripts.</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/MapReduceNode.html"> MapReduceNode </a></TD>
+<TD>org.qbroker.node.MapReduceNode</TD>
+<TD> MapReduceNode picks up JMS messages as the requests and maps the each request to multiple destinations and collects the responses from them. </TD>
+</TR>
+<TR>
+<TD> <a HREF="node/MonitorNode.html"> MonitorNode </a></TD>
+<TD>org.qbroker.node.MonitorNode</TD>
+<TD>MonitorNode provides monitors on-demand</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/ParserNode.html"> ParserNode </a></TD>
+<TD>org.qbroker.node.ParserNode</TD>
+<TD>ParserNode parses JMS Message body and extracts properties out of it</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/PickupNode.html"> PickupNode </a>
+<TD>org.qbroker.node.PickupNode</TD>
+<TD>PickupNode picks up messages from various on-demand sources</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/PipeNode.html"> PipeNode </a>
+<TD>org.qbroker.node.PipeNode</TD>
+<TD>PipeNode controls message through put</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/PublishNode.html"> PublishNode </a>
+<TD>org.qbroker.node.PublishNode</TD>
+<TD>PublishNode publishes Messages with topics and delivers them to their subscribers</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/ScreenNode.html"> ScreenNode </a></TD>
+<TD>org.qbroker.node.ScreenNode</TD>
+<TD>ScreenNode screens JMS messages according to their content and the predefined rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/ScriptNode.html"> ScriptNode </a></TD>
+<TD>org.qbroker.node.ScriptNode</TD>
+<TD>ScriptNode runs scripts process payload and properties of JMS messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/SelectNode.html"> SelectNode </a></TD>
+<TD>org.qbroker.node.SelectNode</TD>
+<TD>SelectNode parses JMS Message body and selects items into messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/ServiceNode.html"> ServiceNode </a>
+<TD>org.qbroker.node.ServiceNode</TD>
+<TD>ServiceNode provides on-demand services via JMS messages</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/SortNode.html"> SortNode </a></TD>
+<TD>org.qbroker.node.SortNode</TD>
+<TD>SortNode sorts JMS messages according to their content and the predefined rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/SpreadNode.html"> SpreadNode </a>
+<TD>org.qbroker.node.SpreadNode</TD>
+<TD>SpreadNode spreads Messages from various source destinations</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/SwitchNode.html"> SwitchNode </a></TD>
+<TD>org.qbroker.node.SwitchNode</TD>
+<TD>SwitchNode switches JMS messages to various destinations according to their content, and preconfigured rulesets</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/XPathNode.html"> XPathNode </a></TD>
+<TD>org.qbroker.node.XPathNode</TD>
+<TD>XPathNode parses XML payload of JMS TextMessages, retrieves data from the XML payload according to the predefined XPath expressions. It then sets them into message as the properties</TD>
+</TR>
+<TR>
+<TD> <a HREF="node/XSLTNode.html"> XSLTNode </a></TD>
+<TD>org.qbroker.node.XSLTNode</TD>
+<TD>XSLTNode transforms XML payload of JMS TextMessages into various formats based on the XSL templates</TD>
+</TR>
+</TABLE>
+
+<p>
+With all of the available nodes, you can actually build a message flow
+to accomplish most of the tasks.  If there is no certain functionality
+within the available nodes, you may just develop a new one and share it
+with others.  In fact, MessageNode is an open API.  If you are interested in
+the development of your own MessageNode, please visit
+<a HREF="expandflow.html">QFlow for Developers</a>.
+</p>
+
+<p>
+The task to configure an instance of MessageNode is pretty challenge,
+simply because there are many different properties for each implementation.
+The best practice is to find an example and start to modify it.  However, most
+of the properties are COMMON.  Others are implementation specific.  Among the
+common properties, some of them are mandatory.  Others are optional.  Here is
+the table listing all the common properties:
+</p>
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the node </TD> <TD> node_switch </TD>
+</TR>
+<TR>
+<TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD>
+<TD> full classname of the implementation </TD> <TD> org.qbroker.node.SwitchNode </TD>
+</TR>
+<TR>
+<TD> Operation </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> operation of the node </TD> <TD> switch </TD>
+</TR>
+<TR>
+<TD> LinkName </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the internal XQueue for input </TD> <TD> root </TD>
+</TR>
+<TR>
+<TD> Capacity </TD> <TD> integer </TD> <TD> optional </TD> <TD> capacity of the internal XQueue for input </TD> <TD> 128 (default value is determined by the container) </TD>
+</TR>
+<TR>
+<TD> XAMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> on/off transcation control </TD> <TD> 1 (default: 1 for on) </TD>
+</TR>
+<TR>
+<TD> MaxNumberRule </TD> <TD> integer </TD> <TD> optional </TD> <TD> maximum number of rulesets </TD> <TD> 32 (default: 512) </TD>
+</TR>
+<TR>
+<TD> WaitTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout to receive messages in milli-second </TD> <TD> 20 (default: 50) </TD>
+</TR>
+<TR>
+<TD> Debug </TD> <TD> integer </TD> <TD> optional </TD> <TD> debug mask </TD> <TD> 31 (default: 0) </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> the mask controls what to log on the incoming messages </TD> <TD> 6 (default: 0) </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> controls what properties to log on the processed messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> Ruleset </TD> <TD> list </TD> <TD> mandatory </TD> <TD> list of rules for processing messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> OutLink </TD> <TD> list </TD> <TD> mandatory </TD> <TD> list of internal XQueues as the message outlets </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+
+<p>
+The operation of a MessageNode is executed via the pre-defined rulesets.
+Therefore, the configuration of the rulesets is critical to the operations
+of a MessageNode.  The details of a ruleset depend on the implementations.
+However, there are some common properties, as follows.
+</p>
+<TABLE border=1>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> optional </TD>
+<TD> full classname of the plugin </TD> <TD> org.qbroker.event.EventParser </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> optional </TD> <TD> name of the preferred outlink </TD> <TD> QB_IN </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of Pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of Pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of Pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of Pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for displaying the properties on messages in the logs </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> mask for logging of messages </TD> <TD> 6 </TD>
+</TR>
+</TABLE>
+
+<p>
+There are two groups of filters. The first one, JMSPropertyGroup, is applied on
+the message properties. The other, PatternGroup, is on the message body.
+Here is an example of JMSPropertyGroup:
+</p>
+<pre>
+{
+  ...
+    "JMSPropertyGroup": [{
+      "JMSType": "^json$",
+      "url": "^https?:"
+    },{
+      "site": "^DEVOPS$",
+    }],
+  ...
+}
+</pre>
+where there are two sets of patterns. The first set is on two properties,
+JMSType and url. It selects the messages if both patterns match the properties.
+The second one has only one pattern. It selects the messages if the message has
+the property of <tt>site</tt> with the value of <b>DEVOPS</b>. The logic
+relationship among the multiple pattern sets is <b>OR</b>. Therefore, any
+messages with either pattern set matched will be selected.
+
+<p>
+Here is an example of PatternGroup for message body:
+</p>
+<pre>
+{
+  ...
+    "PatternGroup": [{
+      "Pattern": ["^https:", "httptra"]
+    },{
+      "Pattern": ["Error:"]
+    }],
+  ...
+}
+</pre>
+where there are two sets of patterns. The first set requires the message body
+containing <b>https:</b> and <b>httptrap</b>. The second requires the pattern
+of <b>Error:</b>. Again, the logic relationship among the multiple pattern sets
+is <b>OR</b>. Therefore, any messages with either pattern set matched will be
+selected.
+
+<p>
+OutLink is a list with all the output XQueues for the node.  There are two
+forms to define an outlink, simple form and full form.  The simple form is just
+listing the name of the XQueue.  The rest of the parameters will be assumed to
+be same as the default values of the node.  The full form defines all
+parameters, such as Capacity, Partition, etc.  Here is an example of an outlink
+in its simple form.
+</p>
+<pre>
+{
+  ...
+  "OutLink": [
+    "log",
+    "failure",
+    "nohit"
+  ]
+}
+</pre>
+where <b>failure</b> is the name of the output XQueue.  Please do not mix the
+name of an outlink with the name of a persister.  In fact, the name of an
+outlink is same as the LinkName of the linked persister or the linked node.
+In the example of above, therefore, there is a node or a persister linked to the
+node via the XQueue of <b>failure</b>.  Here is another example of an outlink
+in the full form.
+<pre>
+{
+  ...
+  "OutLink": [
+    "log",
+    "failure",
+    {
+      "Name": "nohit",
+      "Capacity": "64",
+      "Partition": "16,16"
+    }
+  ]
+}
+</pre>
+where Partition specifies the range of cells in the given XQueue.  The first
+number is the index or the id for the beginning cell of the XQueue.  The 2nd
+number is the number of cells in the partition.  So the Partition of 16,16
+means the 16 cells from cell 16 through cell 31.
+
+<p>
+Here is an example of SwitchNode:
+<pre>
+{
+  "Name": "node_switch",
+  "ClassName": "org.qbroker.node.SwitchNode",
+  "Description": "switch events",
+  "Operation": "switch",
+  "LinkName": "switch",
+  "Capacity": "1024",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "Ruleset": [{
+    "Name": "bypass",
+    "Type": "preferred",
+    "PreferredOutLink": "null",
+    "JMSPropertyGroup": [{
+      "site": "^DEFAULT$",
+      "category": "^EVENT$"
+    }]
+  },{
+    "Name": "syslog",
+    "Type": "preferred",
+    "PreferredOutLink": "data",
+    "JMSPropertyGroup": [{
+      "type": "^syslog$",
+      "name": "cache_log$"
+    }]
+  }],
+  "OutLink": [
+    "null",
+    "data",
+    "bymin"
+  ]
+}
+</pre>
+where this node has two rulesets and two outlinks.
+</p>
+
+<p>
+If certain global variables are defined in the container, they can be used
+in the configuration of nodes. A global variable is something like:
+<b>${xxx}</b> where <b>xxx</b> is the name of the global variable. During
+the instanciation of the node, all the global variables will be resolved
+as long as they are defined in the container. One of the usages of global
+variables is to define host specific environment variables.
+</p>
+
+<p>
+To view examples and manuals on other nodes, please click on the name
+on the node list.
+</p>
+
+<a NAME="Todo"></a>
+<h2> Todo list </h2>
+<p>
+QBroker is an ongoing open source project at
+<a href="http://github.com/yannanlu/qbroker">GitHub</a>.
+
+</body>
+</html>

@@ -1,0 +1,1064 @@
+<html>
+<head>
+<title>WebAdmin</title>
+</head>
+<body>
+<a name="WebAdmin"></a>
+<h1> WebAdmin </h1>
+<p>
+WebAdmin is a web application powered by QBroker at the middle tier and RDBMS
+database at the backend. With Javascript running at the client side, together
+they provide a service of admin console for various applications. The middle
+tier is workflow based. So it is very easy to be customized with various
+workflows to support different applications. Currently, WebAdmin supports
+MonitorAgent, QBroker Flow, JMS Browser and WebShell, etc. With WebAdmin,
+users are able to configure/deploy/start/stop various applications.
+</p>
+
+<UL>
+<LI> <a HREF="#Overview"> Overview </a></LI>
+<LI> <a HREF="#QBroker"> QBroker </a></LI>
+<LI> <a HREF="#Content_Tree"> Content Tree </a></LI>
+<LI> <a HREF="#Database"> Database </a></LI>
+<LI> <a HREF="#Tomcat"> Tomcat </a></LI>
+<LI> <a HREF="#Nginx"> Nginx </a></LI>
+<LI> <a HREF="#Dependencies"> Dependencies </a></LI>
+<LI> <a HREF="#Final_Touch"> Final Touch </a></LI>
+<LI> <a HREF="#Todo"> Todo List </a></LI>
+</UL>
+
+<a name="Overview"></a>
+<h2> Overview </h2>
+<p>
+WebAdmin is a console service for users to manage various applications. It
+consists of five subsystems, QBroker, Content Tree, Database, Tomcat and Nginx.
+Before getting into the details, let us look at an example that WebAdmin is
+used to manage configurations and operations for MonitorAgent, EventFlow and
+StatsFlow as a part of a Monitor Network:
+</p>
+<img src="misc/MonitorNetwork.jpg" />
+<p>
+where various monitor agents are sending metrics or notifications to some
+centralized event collectors either on premises or on cloud via http or https.
+Nginx is used on premises to log metrics and notifications to stats_log and
+event_log, respectively. Two instances of QBroker Flow pick up data from logs
+and process them with a bunch of alerting rules. Eventually all the data are
+stored to either InfluxDB or Elasticsearch for visualizations and further
+analyses. Grafana is the tool for end users to view and analyze the monitor
+metrics and notifications. WebAdmin is the management console for those
+QBroker Flows and MonitorAgents on various hosts.
+</p>
+<p>
+Even though WebAdmin Console can be owned by any user and deployed at any where,
+here we focus on the standard deployment. In the standard deployment, it is
+owned by <tt>qbadm</tt> and homed at <tt>/www/wdap</tt>. As shown in the
+following diagram, there are five subsystems in WebAdmin Console. The first
+subsystem is an instance of QBroker message flow. The second is an instance of
+RDBMS database storing all configurations. The next is the Tomcat servlet
+engine hosting the webapp for the WebAdmin Console. Then it is the Nginx that
+plays multiple roles, such as the frontend of the webapp, the event collector
+and the web server for the static content and the configuration files of the
+repository. The last is the content tree which includes the directories for
+webapps, javascripts for Webadmin Console, the repository for configurations
+and the staging area. The content tree is homed at <tt>/www/wdap</tt>. Here is
+the conceptual diagram:
+</p>
+<img src="misc/webadmin_nginx.jpg" />
+<p>
+WebAdmin's middle tier is powered by QBroker Flow running inside a Java WebApp
+container. QBroker is a message flow based application.  It is very flexible
+and easy to be confgiured to fit most of the needs.  Here is the diagram of
+the message flow for WebAdmin Console:
+</p>
+<img src="flow/CONSOLE.jpg" />
+<p>
+To add a new feature, for example, you just need to add new nodes or modify the
+existing nodes. There is no need to write new codes in most cases.
+</p>
+
+<a name="QBroker"></a>
+<h2> QBroker </h2>
+<p>
+The installation of QBroker is simple. If your box has web access to
+<TT>panda</TT>. It will be really simple. You just need to
+login on the box and run the followinig command to have it installed:
+<pre>
+wget -O - http://panda:8082/installQB.sh | sudo bash
+</pre>
+In some cases, the web access to <TT>panda</TT> may not be
+allowed. So you will have to download the tar balls and the installation
+script from <TT>panda</TT>. Then you need to copy them to the
+box for the installation. Here is the procedure with the step-by-step info:
+<UL>
+<LI> Run the following commands to download the tarballs to your workstation:
+<pre>
+wget http://panda:8082/qblog.tgz
+wget http://panda:8082/qbroker.tgz
+wget http://panda:8082/java7.tgz
+wget http://panda:8082/installQB.sh
+</pre>
+</LI>
+<LI> Copy the tar balls and the script to the box you are going to install
+QBroker.</LI>
+<LI> Login on the box on which you are going to install QBroker.</LI>
+<LI> Cd to the directory with the tar balls and the script.</LI>
+<LI> Run the following command to install:
+<pre>
+sudo bash ./installQB.sh .
+</pre>
+</LI>
+</UL>
+</p>
+
+<a name="Content_Tree"></a>
+<h2> Content Tree </h2>
+<p>
+WebAdmin Console is a web application. It requires a content tree just like a
+regular web site. The content tree contains the configuration repository for
+all the managed applications, the staging area for the working copies and the
+repository for webapps. Each repository of WebAdmin has its own content tree.
+Therefore, the first task is to set up the content tree.
+</p>
+<p>
+It is easy to set up the content tree from scratch. Before you start the work,
+please make sure the hosting boxes are of the Unix platform. Here we assume
+that there is only one box to host the WebAdmin. In order to manage the
+configurations for various applications, it is also required the user accounts
+and groups for each applications. The installation of QBroker in the previous
+step is supposed to create the user account for <tt>qbadm:qb</tt> already.
+If your box has web access to <TT>panda</TT>. You just need to
+login on the box and run the followinig command to have it installed:
+</p>
+<pre>
+wget -O - http://panda:8082/installWdap.sh | sudo bash
+</pre>
+<p>
+In some cases, the web access to <TT>panda</TT> may not be
+allowed. So you will have to download the tar balls and the installation
+script from <TT>panda</TT>. Then you can copy them to the
+box for the installation. Here is the step-by-step tasks:
+<UL>
+<LI> Run the following commands to download the tarballs to your workstation:
+<pre>
+wget http://panda:8082/wdap.tgz
+wget http://panda:8082/installWdap.sh
+</pre>
+</LI>
+<LI> Copy the tar ball and the script to the box you are going to install
+WebAdmin.</LI>
+<LI> Login on the box on which you are going to install WebAdmin.</LI>
+<LI> Cd to the directory with the tar ball and the script.</LI>
+<LI> Run the following command to install the content tree:
+<pre>
+sudo bash ./installWdap.sh .
+</pre>
+</LI>
+</UL>
+Please pay close attention to the output of the script. If there is any error,
+you need have it resolved sooner than later.
+</p>
+<p>
+In the content tree, there are some configuration files for customizations.
+Before going through them, let us get familliar with the layout of the content
+tree.
+</p>
+<table border="1">
+<tr>
+<th> Path </th>
+<th> Owner </th>
+<th> Group </th>
+<th> Permission </th>
+<th> Description </th>
+</tr>
+<tr>
+<td> /www/wdap </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> home directory of the repository </td>
+</tr>
+<tr>
+<td> /www/wdap/bin </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory for scripts and utilities </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/deploy.sh </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> shell script for deployment </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/publish.sh </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> shell script for publishment </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/new_application_dir.sh </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> shell script for creating new applications </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/new_service_dir.sh </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> shell script for creating new services </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/launch.exp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> expect script for launching apps </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/push.exp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> expect script for pushing content </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/mrsync.exp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> expect script for rsync a group of content </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/rsync_wrapper.exp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> expect script of rsync wrapper </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/scp_wrapper.exp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> expect script of scp wrapper </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/ssh_wrapper.exp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> expect script of ssh wrapper </td>
+</tr>
+<tr>
+<td> /www/wdap/bin/sudo_wrapper.exp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> expect script of sudo wrapper </td>
+</tr>
+<tr>
+<td> /www/wdap/cfg </td>
+<td> root </td>
+<td> qb </td>
+<td> 0755 </td>
+<td> directory for configureation file </td>
+</tr>
+<tr>
+<td> /www/wdap/cfg/users.pw </td>
+<td> root </td>
+<td> nginx </td>
+<td> 0640 </td>
+<td> password file for web access to the configuration repository </td>
+</tr>
+<tr>
+<td> /www/wdap/cfg/pm.json </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> property file for deployment </td>
+</tr>
+<tr>
+<td> /www/wdap/cfg/pub.json </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> property file for publishing </td>
+</tr>
+<tr>
+<td> /www/wdap/cfg/host.lst </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> host list for webadmin cluster </td>
+</tr>
+<tr>
+<td> /www/wdap/incoming </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory of incoming for uploads </td>
+</tr>
+<tr>
+<td> /www/wdap/console </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory of configuration files for WebAdmin Console</td>
+</tr>
+<tr>
+<td> /www/wdap/examples </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> directory of examples for various DB schemas and workflow configurations</td>
+</tr>
+<tr>
+<td> /www/wdap/examples/oracle </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> directory for Oracle schema and workflow configurations</td>
+</tr>
+<tr>
+<td> /www/wdap/examples/mysql </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> directory for MySQL schema and workflow configurations</td>
+</tr>
+<tr>
+<td> /www/wdap/examples/postgresql </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> directory for PostgreSQL schema and workflow configurations</td>
+</tr>
+<tr>
+<td> /www/wdap/static </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> docroot for static content </td>
+</tr>
+<tr>
+<td> /www/wdap/static/console </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> directory of html pages for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/static/cfg </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> directory of configuration javascripts for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/static/docs </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> online documentations for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/static/lib </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> directory of javascript libs for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/static/jtmp </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> directory of JSON templates for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/static/images </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0775 </td>
+<td> directory of images for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> docroot of configuration repository for all applications </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot/console </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory for WebAdmin Console's configurations </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot/console/WebAdmin </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot/console/WebAdmin/console.json </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0660 </td>
+<td> configuration json file for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot/console/WebAdmin/host.lst </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 0664 </td>
+<td> host list for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot/console/WebAmin/cfg </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory of inidividual configuration files for WebAdmin </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot/agent </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory for Monitor Agent's configurations </td>
+</tr>
+<tr>
+<td> /www/wdap/docroot/flow </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory for Message Flow's configurations </td>
+</tr>
+<tr>
+<td> /www/wdap/staging </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> staging area for all applications </td>
+</tr>
+<tr>
+<td> /www/wdap/staging/.default </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory for the templates of the default application </td>
+</tr>
+<tr>
+<td> /www/wdap/staging/.default/cfg </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory of inidividual configuration files for the default application </td>
+</tr>
+<tr>
+<td> /www/wdap/staging/.type </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2775 </td>
+<td> directory of templates for existing object types </td>
+</tr>
+<tr>
+<td> /www/wdap/webapps </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2755 </td>
+<td> directory of webapps for webadmin </td>
+</tr>
+<tr>
+<td> /www/wdap/webapps/broker </td>
+<td> qbadm </td>
+<td> qb </td>
+<td> 2755 </td>
+<td> deployment for webapps of broker </td>
+</tr>
+</table>
+<p>
+For an application, like Agent, there are at least 4 copies of the configuration
+files. The first copy is the local copy on the application machines. The
+second copy is in the repository, ie, <tt>/www/wdap/docroot</tt>. The third
+one is in the database. The fourth one is in the staging area as the working
+copy. When a user opens a configuration file, WebAdmin Console retrieves it from
+the database. Once changes are made to the file and saved, WebAdmin Console
+saves the changes to both the database and the staging area. If the user tries
+to preview the file, the console picks up the copy on the staging area. The
+changes can be published to the repository via the publish button. The version
+on the repository can be deployed to the boxes where the application runs.
+</p>
+
+<a name="Database"></a>
+<h2> Database </h2>
+<p>
+WebAdmin stores everything into a database and retrieves them from the database
+upon requests.  The database is the subsystem on the domain level.  Multiple
+repositories on the same doamin will share the same database.  Even though
+WebAdmin supports other databases, like MySQL or Oracle, the standard
+deployment requires PostgreSQL database. In most cases, there is no need for
+you to install and configure the database by yourself. The DBAs are supposed to
+take care of those tasks.  Most likely, the database has already been fully
+functional. You will just need to have your WebAdmin Console and the repository
+point to it. In case there is no existing database instance ready for you,
+you have to install the database with either yum on Centos or apt-get on
+Ubuntu. Then you can load the schema by following the instructions below:
+</p>
+<p>
+For PostgreSQL, you need to create the user account and database after the
+installation. After switch to the owner of <tt>postgres</tt>, you can run
+the following command for the task:
+</p>
+<pre>
+psql
+> create user qbdba with password 'xxxx';
+> create database qbrokerdb owner qbdba template template1;
+> \q
+</pre>
+where you need to replace <tt>xxxx</tt> with the password for <tt>qbdba</tt>.
+<p>
+Once the account is created, you can login as <tt>qbdba</tt> to load the
+table schema:
+</p>
+<pre>
+psql -U qbdba -h localhost -f /www/wdap/examples/postgresql/schema.sql qbrokerdb
+</pre>
+where it assumes the database is running on the same box as WebAdmin Console
+does. You will be prompted for password on the user of <tt>qbdba</tt>.
+
+<p>
+For MySQL, you need to create the user account and database after the
+installation.
+</p>
+<pre>
+mysql -u root -pxxxx
+> create database qbrokerdb;
+> create user 'qbdba'@localhost identified by 'yyyy';
+> grant all on qbroker.* to 'qbdba';
+> exit
+</pre>
+where you need to replace <tt>xxxx</tt> with the password for MySQL root
+account. For <tt>yyyy</tt>, you need to replace it as the password for
+<tt>qbdba</tt>. Once the account is created, you can login as <tt>qbdba</tt>
+to load the table schema:
+<pre>
+cat /www/wdap/examples/mysql/schema.sql | mysql -u qbdba -pyyyy qbrokerdb
+</pre>
+where <tt>yyyy</tt> is the passwrod for <tt>qbdba</tt>. It also assumes the
+database is running on the same box as WebAdmin Console.
+
+<p>
+For Oracle, you need to ask DBAs to create the accounts with proper roles
+granted. Here is the script for the task:
+</p>
+<pre>
+-- create schema for qb_owner and qb_user on Oracle
+create user qb_owner identified by xxxx;
+grant connect, resource to qb_owner;
+create tablespace qbtbspc default storage (initial 40960 next 40960 minextents 1 maxextents 505 pctincrease 0) datafile 'path_to_data_dir/qbtbspc_01.dbf' size 150M;
+alter user qb_owner default tablespace qbtbspc;
+create user qb_user identified by yyyy;
+grant connect, resource to qb_user;
+</pre>
+where you need to replace xxxx and yyyy with the real passwords for the users
+and path_to_data_dir with the real path for the data files.
+<p>
+Once the users are created, you should be able to login on the DB to create
+the schema for qb_owner. The schema is stored in the content tree:
+<tt>/www/wdap/examples/oracle/schema.sql</tt>.
+</p>
+<p>
+After the database and schema are ready, you should have the access info. The
+next is to update WebAdmin Console configuration so that it points to the right
+database. It will be covered in the section of Tomcat.
+</p>
+
+<a name="Tomcat"></a>
+<h2> Tomcat </h2>
+<p>
+The core of WebAdmin Console is a Java web application which can run inside any
+standard Java web application container. In the standard deployment of
+WebAdmin, Tomcat web server has been chosen as the servlet engine. The
+easiest way to install Tomcat on Linux is to use either yum for Centos or
+apt-get for Ubuntu.
+</p>
+<p>
+Since Tomcat is the container for the WebAmin Console, it should run as
+the user of <tt>qbadm</tt>. Please make sure the instance of Tomcat starts
+as the user of <tt>qbadm</tt>. It is kind of tricky to change the user of
+the Tomcat instance. Here is the step-by-step instructions for Ubuntu:
+</p>
+<ol>
+<li>Stop Tomcat with the following command:
+<pre>
+sudo service tomcat stop
+</pre>
+</li>
+<li> Clean up the cache folder, temp folder and logs via the following commands:
+<pre>
+sudo rm -fr /usr/share/tomcat/temp/*
+sudo rm -fr /usr/share/tomcat/work/Catalina
+sudo rm -fr /var/log/tomcat/*
+sudo chmod g+w /usr/share/tomcat/temp
+sudo chmod g+w /usr/share/tomcat/work
+sudo chmod g+w /var/log/tomcat
+</pre>
+</li>
+<li> Use your favorite editor to open the file of <tt>/etc/default/tomcat</tt>.
+Make sure the following two lines are uncommented with the right values:
+<pre>
+JAVA_HOME="/opt/java/jdk1.7.0_75"
+TOMCAT_USER="qbadm"
+</pre>
+</li>
+<li>Start Tomcat with the following command:
+<pre>
+sudo service tomcat start
+</pre>
+Tomcat instance should be running as <tt>qbadm</tt>.
+</li>
+</ol>
+<p>
+For Centos, it should be similar except for the default setting in
+<tt>/etc/sysconfig/tomcat</tt>. But for RHEL 7, the service is managed by
+<tt>systemd</tt>. Here is the steps to change the user for Tomcat:
+</p>
+<ol>
+<li>Stop Tomcat with the following command:
+<pre>
+sudo systemctl stop tomcat
+</pre>
+</li>
+<li> Clean up the cache folder, temp folder and logs via the following commands:
+<pre>
+sudo rm -fr /usr/share/tomcat/temp/*
+sudo rm -fr /usr/share/tomcat/work/Catalina
+sudo rm -fr /var/log/tomcat/*
+sudo chmod g+w /usr/share/tomcat/temp
+sudo chmod g+w /usr/share/tomcat/work
+sudo chmod g+w /var/log/tomcat
+</pre>
+</li>
+<li> Update the systemd unit file with the following commands:
+<pre>
+echo -e "[Service]\nUser=qbadm" &gt; /tmp/custom-user.conf
+sudo mkdir -p /etc/systemd/system/tomcat.service.d
+sudo cp /tmp/custom-user.conf /etc/systemd/system/tomcat.service.d
+sudo systemctl daemon-reload
+rm -f /tmp/custom-user.conf
+</pre>
+</li>
+<li>Start Tomcat with the following command:
+<pre>
+sudo systemctl start tomcat
+</pre>
+Tomcat instance should be running as <tt>qbadm</tt>.
+</li>
+</ol>
+<p>
+Once Tomcat is installed, its configureation folder would probably be
+<tt>/etc/tomcat</tt>. If not, check the folder of tomcat7 or tomcat8 under
+<tt>/etc</tt> or find out its location. Here we assume the configuration
+folder for installed Tomcat is <tt>/etc/tomcat</tt>.  Run the following
+command to copy the configuration file for the webamin webapp to its
+configuration folder:
+</p>
+<pre>
+sudo cp /www/wdap/examples/broker.xml /etc/tomcat/Catalina/localhost
+</pre>
+<p>
+In case the configuration folder is not <tt>/etc/tomcat</tt>, make the necessary
+adjustment in the command line.
+</p>
+<p>
+As the webapp container, Tomcat is going to host WebAdmin Console as a Java
+application. We need to make sure WebAdmin Console is well configured before
+to restart Tomcat. Since database has been installed and configured in the
+previous step, we just need to choose the right set of configureation files
+for the database. Assuming PostgreSQL is the database for WebAdmin Console,
+here are the steps to set up configurations:
+</p>
+<ol>
+<li> Run the following commands to deploy Console config files for PostgreSQL:
+<pre>
+sudo cp /www/wdap/examples/postgresql/WebAdmin/cfg/* /www/wdap/console
+sudo cp /www/wdap/examples/postgresql/jaas.conf /www/wdap/console
+sudo chown qbadm:qb /www/wdap/console/*
+sudo chmod g+w /www/wdap/console/*
+</pre>
+If your DB is either MySQL or Oracle, you should replace <tt>postgresql</tt>
+with either <tt>mysql</tt> or <tt>oralce</tt> in the copy command lines.
+</li>
+<li> Cd to <tt>/www/wdap/console</tt> and open the following file with your
+favorite text editor:<br>
+<tt>rpt_global_var.json</tt><br>
+please update the values for
+<b>Repos_URL, Repos_HOST, DB_URL, DB_USER, DB_PASS</b>, etc.
+</li>
+<li> In the same folder, open the following file with your
+favorite text editor:<br>
+<tt>jaas.conf</tt><br>
+please update the values for <b>URI, Username and Password</b> in JDBC block.
+</li>
+</ol>
+<p>
+WebAdmin Console also requires users to login for security and accountability.
+It supports JAAS (Java Authorization and Authentication API). If you have your
+favorit JAAS plugins, you can use them for your WebAdmin Console. By default,
+JDBC to the database is used for the JAAS. It means you will have to create
+user accounts and manager their permissions. If you want to use Single-Sign-On,
+you should update the file of <tt>/www/wdap/console/jaas.conf</tt> and also
+update the file of <tt>/www/wdap/webapps/broker/WEB-INF/web.xml</tt> for the
+new value of JAASLogin.
+</p>
+
+<a name="Nginx"></a>
+<h2> Nginx </h2>
+<p>
+Nginx plays multiple roles for WebAmin Console. First, it is the frontend
+of web application of Console. With Nginx at the front, it is easy to add
+SSL protections. Second, Nginx is used to serve configuration files for
+managed applications. All the configuration files are JSON files in plain
+text, stored in the repository. Third, Nginx is used to collect POST data
+from various sources as the gateway for events, metrics and alerts. The
+easiest way to install Nginx on Linux is to use either yum for Centos or
+apt-get for Ubuntu.
+</p>
+<p>
+Once Nginx is installed, its configureation folder would probably be
+<tt>/etc/nginx</tt>. If not, make sure you find out its location. Here we
+assume the configuration folder for installed Nginx is <tt>/etc/nginx</tt>.
+Run the following command to copy the configuration file for Nginx to its
+configuration folder:
+</p>
+<pre>
+sudo cp /www/wdap/examples/localhost.conf /etc/nginx/conf.d/`hostname`.conf
+</pre>
+<p>
+In case the configuration folder is not <tt>/etc/nginx</tt>, make the necessary
+adjustment in the command line.
+</p>
+<p>
+Since Nginx needs to read the password file of <tt>/www/wdap/cfg/users.pw</tt>,
+please make sure the group ownership of the file is same as the group of
+the Nginx process.
+</p>
+<p>
+This concludes the installation and basic configuration of QBroker, Database,
+Tomcat, Nginx, and Content tree for a single repository. In case of production,
+it is recommended to set up a backup repository and WebAdmin instance with
+replications enabled.
+</p>
+
+<a name="Dependencies"></a>
+<h2> Dependencies </h2>
+<p>
+Even though all five subsystems of WebAdmin are ready, we still can not
+start up WebAdmin Console due to the missing dependencies. As you know,
+WebAdmin Console runs as the user of <tt>qbadm</tt>. It will have to have
+the right to modify the configurations on behalf the owner of other
+applications. It should also be able to restart the applications on the
+remote boxes via ssh.
+</p>
+<p>
+In case to deploy the configuration files to a remote box or restart the
+application on a remote box, WebAdmin will need the ssh access to the box
+as the application owner. In order to have the centralized control over
+the remote access, we do not suggest to use ssh keys for the authentications.
+The standard deployment is assuming a plain-text password stored in the file
+of <tt>/home/user_login/.ssh/user_login.pw</tt>. Therefore, please set up
+the password file for the user of <tt>qbadm</tt> as follows:
+</p>
+<pre>
+su - qbadm
+cd /home/qbadm
+cd .ssh
+echo qbadm_password &gt; qbadm.pw
+chmod go-rwx qbadm.pw
+exit
+</pre>
+<p>
+where you need to replace <b>qbadm_password</b> with the password for
+the user of <tt>qbadm</tt>. If there is no <tt>.ssh</tt> directory, you can
+run ssh against the localhost to create it. Please do the similar task for
+the user of <tt>qbadm</tt>.
+</p>
+<p>
+WebAdmin has a component of EventCollector which collects the incoming events
+from various applications. EventCollector will persist incoming events into
+the log file, <tt>/var/log/nginx/event_log</tt>. Please make sure the
+directory of <tt>/var/log/nginx</tt> having the right permissions. It should
+be owned by qbadm:nginx with 2775 permission. EventFlow should also be
+configured on the box to pick up the events from the log file.
+</p>
+<p>
+WebAdmin Console requires Expect to run scripts on behalf various users.  If
+there is no Expect installed, you need to have it installed installed.  Then
+please make sure all the expect scripts in <tt>/www/wdap/bin</tt> have the
+right path for expect.  If they are wrong, please update the first line of the
+scripts.  Here is an example,
+<pre>
+#!/usr/bin/expect --
+</pre>
+where it is assumed the expect locates in <tt>/usr/bin</tt>.
+</p>
+<p>
+In the folder of <tt>/www/wdap/bin</tt>, there are a bunch of symlinks for
+various unix commands. They are created by the script of <tt>installWdap.sh</tt>
+in the section of installation for Content Tree. Please make sure all of them
+are valid. If any of them errored out during the installation of Content Tree,
+please have them installed and symlinked with the same name. If you have your
+favorite Java, you can update the symlink here on java.
+</p>
+
+<a name="Final_Touch"></a>
+<h2> Final Touch </h2>
+<p>
+Finally, WebAdmin Console is ready to start up. Here are the steps to start up
+the console:
+</p>
+<ul>
+<li> Run the following command to start up Tomcat:
+<pre>
+sudo service tomcat restart
+</pre>
+In case of systemd, try:
+<pre>
+sudo systemctl restart tomcat
+</pre>
+</li>
+<li> Make sure there is no major errors in the log of
+<tt>/var/log/qbroker/Console.log</tt>
+</li>
+<li> Run the following command to start up Nginx:
+<pre>
+sudo service nginx restart
+</pre>
+In case of systemd, try:
+<pre>
+sudo systemctl restart nginx
+</pre>
+</li>
+</ul>
+<p>
+If there is no errors, you should be able to launch the admin console with
+your web browser pointing to the url of http://your_hostname/console/home.html.
+The default admin user is <tt>qbadm</tt> with the password of <tt>qBr0ker</tt>.
+Once you are able to login on the WebAdmin Console, you should see a table
+view on the working pane as follows:
+</p>
+<table border="1">
+<tr>
+<th>VIEW_NAME</th><th>TAB_NAME</th><th>COL_NAME</th><th>DESCRIPTION</th>
+</tr>
+<tr>
+<td>application</td><td>applications</td><td>short_name</td><td>applications</td>
+</tr>
+<tr>
+<td>site</td><td>sites</td><td>site_name</td><td>customer sites</td>
+</tr>
+<tr>
+<td>hostgroup</td><td>hostgroups</td><td>hostgroup_name</td><td>host groups</td>
+</tr>
+<tr>
+<td>role</td><td>roles</td><td>role_name</td><td>admin roles</td>
+</tr>
+<tr>
+<td>group</td><td>groups</td><td>group_name</td><td>user groups</td>
+</tr>
+<tr>
+<td>repository</td><td>repositories</td><td>repository_name</td><td>repositories</td>
+</tr>
+<tr>
+<td>elink</td><td>elinks</td><td>elink_name</td><td>links for external information</td>
+</tr>
+</table>
+
+<p>
+As we mentioned before, if you are setting up a new domain, the database is
+almost empty.  You will need to use WebAmin Console to create some basic
+objects, such as the current repository, new sites, applications, etc.
+First thing first, you need to add your repository to the
+repository view.  Double click on the repository on the working pane to
+open the repository view.  Then click on <b>Create</b> button on the top
+to add your repository to the view.  Here is an example for repository of
+PANDA:
+</p>
+
+<table border="1">
+<tr>
+<th>REPOSITORY_NAME</th><th>URI</th><th>PATH</th><th>DESCRIPTION</th>
+</tr>
+<tr>
+<td>PANDA</td><td>http://panda:8082</td><td>/www/wdap</td><td>repository for integration team</td>
+</tr>
+</table>
+where <b>URI</b> is for the remote access to the repository, <b>PATH</b>
+defines the filesystem path to the repository.  You should always name your
+repository in uppercase.  Make sure to replace PANDA with your repository
+name and replace panda with your hostname.
+
+<p>
+This will also add your repository as the first site to the site view.
+Double click on the name of the newly created repository on the summary view
+of repository to list all sites in the repository.  The default site will be
+there.
+</p>
+
+<p>
+Next you should create a new application, a new role, a new hostgroup or
+a new user group, etc.  The <b>Help</b> button on every view is helpful.  It
+explains each properties on every views.  Since Console is used to power
+WebAdmin Console, you should create Console as the first application and
+then import WebAdmin as the first service.
+</p>
+<p>
+Click on the DOMAIN link below the buttons on the working pane.  You will
+see the domain view.  Click on application twice on the working pane to open
+the appication's sumary view.  Then click on <b>Create</b> button on the top
+to add Console as the first application.  Here is the detail for Console:
+</p>
+<table border="1">
+<tr>
+<th>SHORT_NAME</th><th>APPLICATION_NAME</th><th>VERSION</th><th>Type</th><th>VENDOR</th><th>URI</th><th>REPOSITORY</th><th>DESCRIPTION</th>
+</tr>
+<tr>
+<td>Console</td><td>Console</td><td>1.0</td><td>Java</td><td>INT</td><td>http://your_hostname/docs/application/webadmin.html</td><td>/www/wdap/docroot/console</td><td>WebAdmin Console</td>
+</tr>
+</table>
+where URI points to the documentation of the application, REPOSITORY is for
+the OS path to the repository of the application.
+<p>
+Next, you need to add the application to the default site.  Expand <b>site</b>
+on the navigation tree on the left pane and click on the site you are working
+on.  The working pane shows an empty table since there is no application added
+to the site.  Click on <b>add</b> button on the top and enter <b>Console</b>
+into the popup box to add Console to the site.  On the working pane, click on
+the name of newly added application.  It leads you to the configuration view
+of the application.  Click on <b>Import</b> button on the top and enter
+<tt>/www/wdap/examples/postgresql/WebAdmin</tt> to import WebAdmin service into
+the repository.  The import process will create WebAdmin as a new service for
+Console. Please select on <b>WebAdmin</b> and click on <b>Modify</b> button to
+change its URI to <tt>http://your_hostname</tt>.  Click on <b>WebAdmin</b>
+again or click on <b>Modify</b> button to save the change.  Since you have
+made some changes to the files in <tt>/www/wdap/console</tt>, please make
+sure to import the changes back to the DB.  Then, please make sure to publish
+the WebAdmin service. Please switch to the deployment view and create the
+instance of WebAdmin Console on the box.
+</p>
+<p>
+As a Java web application, WebAdmin Console heavily relies on the database. In
+case of the database outage, the WebAdmin Console will not work at all.
+However, the design of WebAdmin ensures the system will still work in the
+manual mode. During the database outage or webapps outage, the Console will not
+be usable. But users can use command line tools to make changes directly to
+the repository bypassing the database and staging. Once the changes are done,
+they can be deployed to production via the command line tools also. The only
+thing to remember is to import all the changes into the database once the
+admin console is back up. Otherwise, the repository and the database will be
+out of sync.
+</p>
+<p>
+The command line deployment is to run <i>/www/wdap/bin/deploy.sh</i> as the
+owner of the repository. The utility is required by both the synchronous
+deployment and the asynchronous deployment. Some applications, like Agent,
+supports the asynchronous deployment. If it is enabled, the asynchronous
+deployment is good enough as long as the application is running. In fact, Agent
+will check the repository for new updates every 5 min by default. If they
+see the new timestamp, they will reload the configuration files automatically.
+For other applications, like Flow or Console, the synchronous deployment is
+required. Either way, you do not have to login on each of the boxes to do the
+task again and again. The command line utility will save your time, especially
+when you are dealing with clusters with multiple vms.
+</p>
+<p>
+Here is the procedure to deploy changes asynchronously for Agent:
+</p>
+<ul>
+<li> login on the WebAdmin box and switch to the owner of the repository. </li>
+<li> go to <tt>/www/wdap/docroot/agent</tt> </li>
+<li> determine which service to modify and cd to <tt>your_service/cfg</tt></li>
+<li> modify/add/delete the json files for the monitors </li>
+<li> update the master file of Agent.json </li>
+<li> run the following command to update the service file:
+<pre>
+/www/wdap/bin/deploy.sh -a agent -c your_service
+</pre>
+</li>
+</ul>
+Since Agent is monitoring the service file in the repository, it will notice the
+new timestamp of the file and downloads the file for the reload automatically.
+<p>
+Here is the procedure to deploy changes synchronously for Agent:
+</p>
+<ul>
+<li> login on the WebAdmin box and switch to the owner of the repository. </li>
+<li> go to <tt>/www/wdap/docroot/agent</tt> </li>
+<li> determine which service to modify and cd to <tt>your_service/cfg</tt></li>
+<li> make all necessary changes on the monitors.  </li>
+<li> update the master file of Agent.json </li>
+<li> run the following command to update the service file:
+<pre>
+/www/wdap/bin/deploy.sh -a agent -c your_service
+</pre>
+</li>
+<li> run the following command to scp configuration files to the boxse:
+<pre>
+/www/wdap/bin/push.exp ../host.lst *.json /opt/qbroker/agent
+</pre>
+</li>
+<li> run the following command to restart all instances of Agent:
+<pre>
+/www/wdap/bin/launch.exp ../host.lst /opt/qbroker/bin/agentctl restart
+</pre>
+</li>
+</ul>
+As you can see, it has two extra steps as compared to the asynchrous deployment.
+The last 2 steps are to deploy the configurations to the boxes and then restart
+the instances on them manually.
+<p>
+For other applications, you need to replace <b>-a agent</b> with the
+<b>-a short_name</b> of the application. The directories should be also replaced
+by the proper values.  Since the changes are made on the repository directly,
+the versions in the DB and the staging area will be out of sync with those
+of the repository.  Please do remember to import the changes back to the DB
+once the DB is available again.
+</p>
+
+<a name="Todo"></a>
+<h2> Todo List </h2>
+<p>
+WebAdmin Console is an ongoing community project. Anyone is welcomed
+to participate in it. If you are interested in this project or want to improve
+WebAdmin Console with your contributions, please contact Yannan Lu.
+</p>
+<p>
+Here is the our todo list for WebAdmin:
+</p>
+<ol>
+<li> Improve documentations of WebAdmin and document every views and every
+buttons in detail. </li>
+<li> Add more case studies of how to customize WebAdmin for new features and
+new applications.  </li>
+<li> Add the installaton view so that users can install applications on
+the remote boxes via the WebAdmin. </li>
+<li> Add the support for GIT for version controls on all configuration files. </li>
+<li> Add support to MongoDB </li>
+<li> Enhance admin console usabilities and its presentation tier. </li>
+<li> Explore the possibility for simple GUI support on Drag and Link. </li>
+<li> Integrate with Apache Lucene or Solr for search support. </li>
+<li> Add edit support for generic files. </li>
+</ol>
+
+</body>
+</html>

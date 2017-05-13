@@ -1,0 +1,314 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> SortNode </B> </FONT>
+</CENTER>
+
+<p>
+SortNode maintains a session and withholds JMS messages for the baking process.
+Once the messages are fully baked, it sorts them according to their sorting
+keys and the pre-defined rulesets.  It routes them out to four outlinks:
+done for sorted messages, bypass for messages which are out of order, nohit
+for those messages do not belong to any rulesets and failure for the messages
+failed in the baking or sorting process.  Since SortNode does not consume
+any messages, any incoming message has to find a way out via one of the four
+outlinks.  Therefore, the messages exiting from done are in right order.
+</p>
+<img vspace=10 halign=center src="SortNode.jpg" />
+<p>
+SortNode contains a number of pre-defined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also defines the sorting
+options for the messages in each group as well as the parameters used
+in the sorting process.  All the groups must share the same key type.
+But different groups may have their own way to construct the sorting key.
+The number of messages withheld for baking process is tracked via the
+RULE_PEND field.  Furthermore, SortNode always creates one extra ruleset,
+nohit.  The ruleset of nohit is for all the messages not hitting any of
+the patterns.
+</p>
+<p>
+SortNode supports both the dynamic session and the baking process.
+It is determined by BakeTime in millisecond and SessionTimeout in second.
+If both BakeTime and SessionTimeout are set to 0 as the default, the session
+will be maintained as static without cache.  In this case, the messages with
+the keys of the first series will be routed to done.  The first series of
+keys are a set of keys whose value are always larger than those before it.
+Other messages will be treated as out of order and are routed to bypass.
+If BakeTime is 0 but SessionTimeout is larger than zero, the session will
+be maintained dynamically with cache.  In this case, SortNode will withhold all
+incoming messages and tracks the mtime of the cache.  If the cache has no
+changes within the recent SessionTimeout seconds, all the messages in the
+cache will be flushed out with the sorted order.  If BakeTime is larger than
+zero, the dynamic session will be controlled by the baking process.  In this
+case, the incoming messages will be baked rather than statically withheld.
+During the baking process, some of the incoming messages will be routed out
+right away. But majority of them will be withheld for a certain time.
+</p>
+<p>
+BakeTime is the minimum time for the reference message of a session to be
+withheld in case other low-key messages arriving late. The reference message is
+the most baked message with a higher key value than the threshold which is the
+highest key value for the previous session. We are not sure taht how many
+messages with lower key values will come after the reference message.
+However, we are sure after certain time (BakeTime), the chance to have messages
+with lower key values is minimal.  Therefore, SortNode keeps the reference
+message and the other new messages in the cache to bake.  Once time is up,
+there is at least one fully baked message in the session. SortNode will look
+for the highest key value among all the fully baked messages. The highest value
+will be saved as the threshold for the next session. All the messages with
+either lower key values or the same key value as compared to the threshold will
+be flushed out according to the ascending order of their keys. If there are
+messages left, they are not fully baked yet and will be baked once more in
+the next session. In this case, SortNode will find the most baked message as
+the reference message for the new session. Otherwise, the first message will
+be the referece message in the new session. This way, SortNode will smooth out
+the fluctuations on the key values of message stream and recovers their
+original order.
+</p>
+<p>
+SortNode also supports the claim mode.  If there is at least one claim
+ruleset defined, the node is on claim mode.  On the claim mode, the routing
+behaviors will be different.  A claim ruleset is similar to a baking ruleset.
+The only difference is that the former has also defined RuleType as "claim".
+The claim rule is designed for active-active message flow clusters.  It
+assumes that the master escalates each processed message to the worker flow.
+Meanwhile, the worker flow is processing the same set of messages. Its
+SortNode also processes the escalated messages from the master. For a
+SortNode on claim mode, it allows the sort rules and the claim rules to
+define IDTemplate.  The IDTemplate specifies the way to extract a unique ID
+from the messages.  These IDs will be cached into a separate cache to
+indicate those messages have been processed on the master flow. There is no
+requirement on the order for the IDs. But if there is no IDTemplate defined,
+the ID will be same as the key.  The messages of claim rulesets will be used
+to terminate the baking process if their keys match any cached keys.  On the
+other hand, if the incoming message has the same ID of the ID cache, it will
+not be baked at all since it has already been processed on the master.
+All the cached messages with the lower or equal key values will be flushed
+to bypass.  We called those cached messages are claimed rather than fully
+baked.  The claiming messages will be routed to nohit.  For those fully
+baked messages, SortNode will route them to out since they have not been
+claimed within certain time window. If SorthNode is on claim mode, its
+uplink must have the 2nd half of the cells unused. The unused partition will
+be reserved for escalations.
+</p>
+<p>
+SortNode will not consume any messages. But it may remove the withheld
+messages from the uplink for certain rulesets. If EXTERNAL_XA bit is set
+on the uplink, those removed messages will be acknowledged as well.
+Eventually, those removed and withheld messages will continue to propagate
+downstreams as usual. This feature is controlled by XAMode of the ruleset.
+If XAMode is not defined in a ruleset, the ruleset will inherit it from
+the node, which will be 1 by default. If it is set to 0, all the withheld
+messages for the ruleset will be acknowledged and removed from the uplink.
+There is a big consequence to disable XA on a ruleset. Please be extremely
+careful if you wnat to disable XA on any ruleset.
+</p>
+<p>
+Here are considerations on when to disable XA on a ruleset. First, you may
+want SortNode to withhold more messages than the capacity of the uplink.
+Second, the source JMS servers may not be able to handle large amount of
+unacknowledged messages. In these cases, XAMode of certain rulesets may be
+set to zero explicitly to disable the XA. As you know, most of the JMS
+vendors implement message acknowledgement via sessions. The acknowledgement
+by SortNode may upset the XA control of the message flow.
+</p>
+<p>
+You are free to choose any names for the four fixed outlinks.  But SortNode
+always assumes the first outlink for done, the second for bypass, the third for
+failure and the last for nohit.
+</p>
+<p>
+Apart from the common properties, there are some implementation specific
+properties for SortNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> SessionTimeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds for messages withheld in the session </TD> <TD> 30 (default: 0) </TD>
+</TR>
+<TR>
+<TD> SessionSize </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of messages withheld in the session </TD> <TD> 1024 (default: 40960) </TD>
+</TR>
+<TR>
+<TD> BakeTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> bake time in milli-seconds </TD> <TD> 30000 (default: 0) </TD>
+</TR>
+<TR>
+<TD> SortKeyType </TD> <TD> string </TD> <TD> optional </TD> <TD> data type of the key </TD> <TD> long </TD>
+</TR>
+</TABLE>
+where SessionSize defines the max number of cached messages in the session.
+Heartbeat controls how often to check the session state. If StringProperty is
+defined on the node level, it will be used to build the summary for withheld
+messages for display.
+</p>
+
+<p>
+The bake operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of SortNode.
+Here are complete properties of rulesets for SortNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds to expire the session </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> RuleType </TD> <TD> string </TD> <TD> optional </TD> <TD> type of the rule </TD> <TD> claim </TD>
+</TR>
+<TR>
+<TD> XAMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> flag for XA </TD> <TD> 1 </TD>
+</TR>
+<TR>
+<TD> TimePattern </TD> <TD> string </TD> <TD> optional </TD> <TD> time pattern for the sort key in case of time </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> IDTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the unique key </TD> <TD> string </TD>
+</TR>
+<TR>
+<TD> KeyTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the sort key </TD> <TD> ##Count## </TD>
+</TR>
+<TR>
+<TD> KeySubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text subsctitution for the sort key </TD> <TD> s/^0// </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where IDTemplate is to build the unique key for baking.  KeyTemplate is for
+the sorting key.  PreferredOutLink can only be defined for bypass
+rulesets.  In this case, the messages of the group will not be processed.
+Here is an example of the bypass ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it sends the messages to the outlink of BYPASS without processing them.
+</p>
+<p>
+Here is an example of the claim ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "claim_file",
+    "RuleType": "claim",
+    "JMSPropertyGroup": [{
+      "category": ".",
+      "messageType": "^6$"
+    }],
+    "KeyTemplate": "##timeStamp##",
+    "IDTemplate": "##serverIP##/##timeStamp##/##notificationType##/##fileURL##",
+    "TimeToLive": "600"
+  }],
+  ...
+}
+</pre>
+where it will claim the messages withheld in the baking process.
+</p>
+
+<p>
+Here is an example of SortNode:
+<pre>
+{
+  "Name": "node_sort",
+  "ClassName": "org.qbroker.node.SortNode",
+  "Description": "test",
+  "Operation": "sort",
+  "LinkName": "omn",
+  "Capacity": "2048",
+  "XAMode": "1",
+  "Debug": "1",
+  "SessionTimeout": "100",
+  "BakeTime": "100000",
+  "SessionSize": "1024",
+  "DisplayMask": "22",
+  "SortKeyType": "long",
+  "StringProperty": {
+    "type": ""
+  },
+  "Ruleset": [{
+    "Name": "claim_file",
+    "RuleType": "claim",
+    "JMSPropertyGroup": [{
+      "category": ".",
+      "messageType": "^6$"
+    }],
+    "KeyTemplate": "##timeStamp##",
+    "IDTemplate": "##serverIP##/##timeStamp##/##notificationType##/##fileURL##",
+    "TimeToLive": "600"
+  },{
+    "Name": "file",
+    "JMSPropertyGroup": [{
+      "timeStamp": ".",
+      "messageType": "^6$"
+    }],
+    "KeyTemplate": "##timeStamp##",
+    "IDTemplate": "##serverIP##/##timeStamp##/##notificationType##/##fileURL##"
+  },{
+    "Name": "claim_job",
+    "RuleType": "claim",
+    "JMSPropertyGroup": [{
+      "category": ".",
+      "messageType": "^8$"
+    }],
+    "KeyTemplate": "##timeStamp##",
+    "IDTemplate": "##guid##/##status##",
+    "TimeToLive": "600"
+  },{
+    "Name": "job",
+    "JMSPropertyGroup": [{
+      "timeStamp": ".",
+      "messageType": "^8$"
+    }],
+    "KeyTemplate": "##timeStamp##",
+    "IDTemplate": "##guid##/##status##"
+  }],
+  "OutLink": ["file", {
+    "Name": "null",
+    "Capacity": "128",
+    "Partition": "64,64"
+  }, "failure", "nohit"]
+}
+</pre>
+where the node is on the claim mode. Since the uplink, <b>omn</b>, has the
+capacity of 32, the partition of (16, 16) is supposed to be reserved for
+escalations.
+</p>
+
+</body>
+</html>

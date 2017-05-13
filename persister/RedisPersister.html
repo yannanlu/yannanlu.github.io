@@ -1,0 +1,76 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> RedisPersister </B> </FONT>
+</CENTER>
+
+<p>
+RedisPersister is a JMS message consumer that persists the content of the
+messages to a Redis data store. It listens to the XQueue aad receives JMS
+nessages as the requests. Either it updates certain datasets on a remote
+Redis server with the content of the messages, or it queries datasets from
+a remote Redis server according to the content of the messages and puts
+the results back to the messages in their body. RedisPersister supports
+flow control and allows object control from its owner.  It is fault tolerant
+with retry and idle options.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for RedisPersister.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> DefaultKeyName </TD> <TD> string </TD> <TD> optional </TD> <TD> default name of the dataset </TD> <TD> mylist </TD>
+</TR>
+<TR>
+<TD> KeyField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for the name of the dataset </TD> <TD> (default: REDIS) </TD>
+</TR>
+<TR>
+<TD> QueryField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for Redis query statement </TD> <TD> (default: Query) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> ResultField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store the number of items returned </TD> <TD> (default: QueryResult) </TD>
+</TR>
+<TR>
+<TD> ResultType </TD> <TD> integer </TD> <TD> optional </TD> <TD> type of the result </TD> <TD> 8 for JSON (default: 1) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+Currently, RedisPersister only supports operations of put, pub, query and
+update.
+</p>
+
+<p>
+Here is an example of RedisPersister:
+
+<pre>
+{
+  "Name": "pstr_redis",
+  "ClassName": "org.qbroker.persister.RedisPersister",
+  "URI": "redis://localhost:6379/",
+  "LinkName": "pool",
+  "Operation": "put",
+  "DefaultKeyName": "mylist",
+  "XAMode": "1",
+  "DisplayMask": "6",
+  "StringProperty": {
+    "REDIS": ""
+  }
+}
+</pre>
+where it rpushes the message body to a list specified by the field of REDIS.
+</p>
+
+</body>
+</html>

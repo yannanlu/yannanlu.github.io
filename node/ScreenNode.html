@@ -1,0 +1,240 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ScreenNode </B> </FONT>
+</CENTER>
+
+<p>
+ScreenNode is a filter node that applies the screen operation on JMS messages
+according to their content and the predefined rulesets.  Based on the filter,
+all the messages will be routed into four outlinks: done for the messages
+passing through the screening process, nohit for those messages do not belong
+to any predefined rulesets, failure for the messages failed at the screening
+process and bypass for the messages screened out.  Since ScreenNode does not
+consume any messages, any incoming messages has to find a way out via one
+of the four outlinks.
+</p>
+<img vspace=10 halign=center src="ScreenNode.jpg" />
+<p>
+ScreenNode contains a number of pre-defined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each ruleset
+defines a unique message group.  The ruleset also defines the screening
+options for the messages in each group as well as other parameters used
+in the screening process, such as TimeToLive and XAMode. With different
+screen options, ScreenNode withholds messages until their sessions time
+out. Therefore, each group maintains its own cache and the session to
+withhold messages temporarily. KeyTemplate is used to extract the keys
+from of the messages. These keys will be used to track the withheld
+messages in the cache. TimeToLive determines when to time out the session
+for the cache. Further more, ScreenNode always creates one extra ruleset,
+nohit. The ruleset of nohit is for all the messages not hitting any of
+the patterns.
+</p>
+<p>
+ScreenNode will not consume any messages. But it may remove the withheld
+messages from the uplink for certain rulesets. If EXTERNAL_XA bit is set
+on the uplink, those removed messages will be acknowledged as well.
+Eventually, those removed and withheld messages will continue to propagate
+downstreams as usual. This feature is controlled by XAMode of the ruleset.
+If XAMode is not defined in a ruleset, the ruleset will inherit it from
+the node, which will be 1 by default. If it is set to 0, all the withheld
+messages for the ruleset will be acknowledged and removed from the uplink.
+There is a big consequence to disable XA on a ruleset. Please be extremely
+careful if you wnat to disable XA on any ruleset.
+</p>
+<p>
+Here are considerations on when to disable XA on a ruleset. First, you may
+want ScreenNode to withhold more messages than the capacity of the uplink.
+Second, the source JMS servers may not be able to handle large amount of
+unacknowledged messages. In these cases, XAMode of certain rulesets may be
+set to zero explicitly to disable the XA. As you know, most of the JMS
+vendors implement message acknowledgement via sessions. The acknowledgement
+by ScreenNode may upset the XA control of the message flow.
+</p>
+<p>
+ScreenNode is also able to monitor the load level report of its first
+outlink if the report is defined.  If the load is high, all cache sessions
+on will be frozen.  It means ScreenNode will ignore all TTLs and will
+treat all cache sessions without expirations.
+</p>
+<p>
+You are free to choose any names for the four fixed outlinks.  But ScreenNode
+always assumes the first outlink for done, the second for bypass, the third for
+failure and the last for nohit.  Any two or more outlinks can share the same
+outlink name.  It means these outlinks are sharing the same output channel.
+</p>
+<p>
+Apart from the common properties, there are some implementation specific
+properties for ScreenNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> SessionSize </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of messages cached in the session </TD> <TD> 102400 (default: 0) </TD>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to check sessions </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> Threshold </TD> <TD> 3 integers delimited by commas </TD> <TD> optional </TD> <TD> thresholds for the cache to be disfragmented </TD> <TD> 50,100,200 </TD>
+</TR>
+</TABLE>
+where SessionSize defines the max number of cached messages in the session.
+Heartbeat controls how often to check the session state. If StringProperty is
+defined on the node level, it will be used to build the summary for those
+withheld messages for display.
+</p>
+
+<p>
+The screen operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of ScreenNode.
+Here are complete properties of rulesets for ScreenNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds to expire the session </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> ScreenOption </TD> <TD> string </TD> <TD> optional </TD> <TD> type of screen process </TD> <TD> first_last </TD>
+</TR>
+<TR>
+<TD> XAMode </TD> <TD> integer </TD> <TD> optional </TD> <TD> flag for XA </TD> <TD> 1 </TD>
+</TR>
+<TR>
+<TD> FieldName </TD> <TD> string </TD> <TD> mandatory for numbers or time only </TD> <TD> field name to screen on number or time </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> DataType </TD> <TD> string </TD> <TD> optional </TD> <TD> data type of the field </TD> <TD> string </TD>
+</TR>
+<TR>
+<TD> TimePattern </TD> <TD> string </TD> <TD> optional </TD> <TD> time pattern for the field </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> KeyTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the unique key </TD> <TD> ##site## </TD>
+</TR>
+<TR>
+<TD> KeySubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text subsctitution for the unique key </TD> <TD> s/^0// </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where ScreenOption only supports min, max, first, last, first_last, and none.
+Within the same session, if ScreenOption is first, only the first the message
+will propagate to out.  The rest of the messages with the same key will be
+routed to bypas.  If ScreenOption is first_last, the first and the last
+messages with the same key will be routed to out with in the same session.
+The rest will go to bypass.  PreferredOutLink can only be defined for bypass
+rulesets.  In this case, the messages of the group will not be processed.
+Here is an example of the bypass ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "BYPASS",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it sends the messages to the outlink of BYPASS without processing them.
+</p>
+<p>
+Here is an example of the screen ruleset.
+<pre>
+{
+  ...
+  "Ruleset": [{
+    "Name": "max_job",
+    "JMSPropertyGroup": [{
+      "messageType": "8"
+    }],
+    "TimeToLive": "300",
+    "FieldName": "count",
+    "DataType": "integer",
+    "ScreenOption": "max",
+    "KeyTemplate": "##site##/##hostname##"
+  }],
+  ...
+}
+</pre>
+where the rule only routes the messages with max count to out.  The session
+is 5 min.
+</p>
+
+<p>
+Here is an example of ScreenNode:
+<pre>
+{
+  "Name": "node_screen",
+  "ClassName": "org.qbroker.node.ScreenNode",
+  "Description": "screening messages in various minutes",
+  "Operation": "screen",
+  "LinkName": "buffered",
+  "Capacity": "256",
+  "DisplayMask": "0",
+  "Debug": "1",
+  "Heartbeat": "30",
+  "SessionSize": "256",
+  "Threshold": "0,50,100",
+  "Ruleset": [{
+    "Name": "ten_min",
+    "TimeToLive": "600",
+    "KeyTemplate": "##JMSType##",
+    "ScreenOption": "first_last",
+    "JMSPropertyGroup": [{
+      "JMSType": "^sport/archive/fannation/xml$"
+    }]
+  },{
+    "Name": "five_min",
+    "TimeToLive": "300",
+    "KeyTemplate": "##JMSType##",
+    "ScreenOption": "first_last",
+    "JMSPropertyGroup": [{
+      "JMSType": "."
+    }]
+  }],
+  "OutLink": [{
+    "Name": "root",
+    "Capacity": "12",
+    "Partition": "8,4"
+  },{
+    "Name": "null",
+    "Capacity": "256",
+    "Partition": "0,256"
+  }, "root", "root"]
+}
+</pre>
+</p>
+
+</body>
+</html>

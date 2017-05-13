@@ -1,0 +1,134 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> ReceiverPool </B> </FONT>
+</CENTER>
+
+<p>
+ReceiverPool is a JMS message consumer that creates, destroys and maintains
+multiple pools of on-demand receivers.  It listens to an XQueue for requests
+carried by ObjectMessages.  The incoming message is supposed to contain a task
+map with the URI and a transmit XQueue, etc. ReceiverPool evaluates the URI
+to figure out the details of the request.  If the request is to ask for a new
+receiver, it first looks up the classname of the implementation based on the
+URI and the given properties.  Then ReceiverPool tries to check out the pool
+of the classname from the cache.  If there exists the receiver pool for
+the implementation, it just checks out a new instance of the receiver
+with the given properties.  Otherwise, ReceiverPool will create a new pool
+for the classname and checks out a new instance of the receiver from it.
+It then starts up a new thread on the receiver and returns the thread back.
+The requester is supposed to monitor the status of the thread in order to
+tell the status of the receiver.  The requester is also able to control the
+receiver via the associated transmit queue.  ReceiverPool will frequently
+monitor the status of all active receivers in every heartbeat.  If any one
+of them is stopped or closed, ReceiverPool will checkin the receiver and
+clean up the cache.  If the request is to return the used thread, it will
+check in both the thread and the receiver.
+</p>
+<p>
+URI is used to identify the data source and the implementation.  ReceiverPool
+parses the URI string and creates a map with all XML properties from the
+key-value pairs specified in the query-string.  Therefore, requesters can add
+multiple properties to the query-string for a new receiver.  In case the URI
+contains its own query-string, the URI separator, <b>&amp;URI=&amp;</b>, must
+be used to separate the original query-string and add-on properties. So please
+carefully define the add-on properties in the query-string of the URI.
+ReceiverPool also allows default properties defined for each implementation.
+If any of the default properties is missing in the URI, PersisterPool will copy
+it to the XML property map before the instantiation of the MessageReceiver.
+</p>
+<p>
+Apart from the common properties, there are many implementation specific
+properties for PersisterPool.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> interval in sec to check outstanding requests </TD> <TD> 30 (default: 60) </TD>
+</TR>
+<TR>
+<TD> MaxNumberReceiver </TD> <TD> integer </TD> <TD> optional </TD> <TD> max number of receivers </TD> <TD> 32 (default: 256) </TD>
+</TR>
+<TR>
+<TD> DefaultPoolSize </TD> <TD> integer </TD> <TD> optional </TD> <TD> pool size for new receivers </TD> <TD> 8 (default: Capacity of the node) </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the URI </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> URIField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name for URI </TD> <TD> (default: URI) </TD>
+</TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> DefaultProperty </TD> <TD> list </TD> <TD> optional </TD> <TD> list of default property map for new receivers </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where DefaultProperty defines the default properties for all the supported
+receivers.
+</p>
+
+<p>
+Here is an example of ReceiverPool:
+
+<pre>
+{
+  "Name": "pstr_pool_in",
+  "ClassName": "org.qbroker.persister.ReceiverPool",
+  "Operation": "accept",
+  "LinkName": "ipool",
+  "Capacity": "128",
+  "XAMode": "1",
+  "MaxNumberReceiver": "512",
+  "DefaultPoolSize": "32",
+  "Heartbeat": "60",
+  "DisplayMask": "13",
+  "StringProperty": {
+    "URI": "ipool"
+  },
+  "DefaultProperty": [{
+    "ClassName": "org.qbroker.persister.StreamReceiver",
+    "URI": "tcp://localhost:7225",
+    "Operation": "read",
+    "EOTBytes": "0x0a",
+    "TextMode": "1",
+    "Mode": "daemon",
+    "KeepAlive": "true",
+    "SOTimeout": "60",
+    "ReceiveTime": "1000",
+    "RetryTimeout": "300",
+    "PauseTime": "5000",
+    "StandbyTime": "12000",
+    "PoolSize": "128",
+    "DisplayMask": "0"
+  },{
+    "ClassName": "org.qbroker.persister.JMSReceiver",
+    "URI": "mq://localhost",
+    "QueueName": "YLU",
+    "Operation": "get",
+    "Mode": "daemon",
+    "MaxIdleTime": "900",
+    "PoolSize": "128",
+    "DisplayMask": "0"
+  },{
+    "ClassName": "org.qbroker.persister.JMSSubscriber",
+    "URI": "mq://localhost",
+    "TopicName": "YLU",
+    "Operation": "sub",
+    "Mode": "daemon",
+    "MaxIdleTime": "600",
+    "PoolSize": "128",
+    "DisplayMask": "0"
+  }]
+}
+</pre>
+</p>
+
+</body>
+</html>
