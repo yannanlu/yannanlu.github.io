@@ -12,7 +12,7 @@
   "QuietPeriod": "12",
   "ExceptionTolerance": "2",
   "DBDriver": "COM.ibm.db2.jdbc.app.DB2Driver",
-  "URI": "jdbc:db2:MPSDB",
+  "URI": "jdbc:db2:MYDB",
   "Username": "qbadm",
   "Password": "xxxx",
   "SQLQuery": "SELECT CREATED_TS FROM MPSINST1.MPST_BATCH_UPDATES_QUEUE ORDER BY CREATED_TS ASC",

@@ -7,7 +7,7 @@
   <FONT SIZE=5> <B> How to write your own MessageNodes for QFlow </B> </FONT> 
 </CENTER>
 <p>
-<a HREF="/javadoc/org/qbroker/flow/QFlow.html">QFlow</a>
+<a HREF="javadoc/org/qbroker/flow/QFlow.html">QFlow</a>
 is a java application that hosts a single Message Flow.
 A generic JMS Message Flow contains three types of message nodes, ReceiverNode,
 PersisterNode and MessageNode. The ReceiverNode and PersisterNode are
@@ -67,10 +67,10 @@ MessageNodes with plugin supports.  In this case, your Java class will run
 inside the message nodes and process the messages.  This is the easiest way to
 integrate your Java code with QFlow.  Otherwise, the other choice is to
 simply implement one or all of the three interfaces,
-<a HREF="/javadoc/org/qbroker/receiver/MessageReceiver.html">MessageReceiver</a>,
-<a HREF="/javadoc/org/qbroker/persister/MessagePersister.html">MessagePersister</a>
+<a HREF="javadoc/org/qbroker/receiver/MessageReceiver.html">MessageReceiver</a>,
+<a HREF="javadoc/org/qbroker/persister/MessagePersister.html">MessagePersister</a>
 and
-<a HREF="/javadoc/org/qbroker/node/MessageNode.html">MessageNode</a>.
+<a HREF="javadoc/org/qbroker/node/MessageNode.html">MessageNode</a>.
 So your application logic is built into the new message
 nodes that are already integrated with QFlow.  This way, you can focus on
 your business logic without worrying other functionalities already available 
@@ -91,7 +91,7 @@ as a reference.  You are also encouraged to implement any interfaces or extend
 any classes.  Please feel free to copy any existing code with a new name and
 make your own changes.  In case you want to commit any changes to the original
 source code, please let Yannan Lu or the owners of the code know first.  Click
-<a HREF="/javadoc"> javadoc </a> to access API specifications for QFlow and
+<a HREF="javadoc"> javadoc </a> to access API specifications for QFlow and
 other related classes.
 </p>
 <UL>
@@ -168,7 +168,7 @@ a common configuration file that represents or encapsulates generic
 hierarchical structures.  It would be possible to use Java properties to
 represent an object.  But this is only good for an object with a flat structure.
 To make this process easier, QFlow uses a special mapper, 
-<a HREF="/javadoc/org/qbroker/json/JSON2Map.html">JSON2Map</a>,
+<a HREF="javadoc/org/qbroker/json/JSON2Map.html">JSON2Map</a>,
 to parse a JSON configuration file of a message node and
 creates an appropriate Java Map object.  This Map object will be
 passed into the constructor of the desired message node class to instanciate
@@ -189,23 +189,23 @@ There are 32 implementations on MessageNode. 7 of them support the customized
 plugins.  They are ParserNode, FormatNode, JSONTNode, SelectNode, SwitchNode,
 ActionNone and AggregateNode. If you have complex messages to parse and there
 is no good support yet, you can try to plugin your own Java class into
-<a HREF="/javadoc/org/qbroker/node/ParserNode.html">ParserNode</a>.
+<a HREF="javadoc/org/qbroker/node/ParserNode.html">ParserNode</a>.
 In case you want to transform the messages in your own way, you can plugin
 your Java class into
-<a HREF="/javadoc/org/qbroker/node/FormatNode.html">FormatNode</a>.
+<a HREF="javadoc/org/qbroker/node/FormatNode.html">FormatNode</a>.
 JSON is often used for structural data, if you want to transform a JSON payload
 into various formats and there is no good support yet, you can try to plugin
 your own Java class into
-<a HREF="/javadoc/org/qbroker/node/JSONTNode.html">JSONTNode</a>.
+<a HREF="javadoc/org/qbroker/node/JSONTNode.html">JSONTNode</a>.
 If you want to use your own Java class to select content from
 the messages, you can consider to adjust your Java class as the plugin to
-<a HREF="/javadoc/org/qbroker/node/SelectNode.html">SelectNode</a>.
+<a HREF="javadoc/org/qbroker/node/SelectNode.html">SelectNode</a>.
 If you want to have your own routing rule, you can try to plugin your
 Java class into
-<a HREF="/javadoc/org/qbroker/node/SwitchNode.html">SwitchNode</a>.
+<a HREF="javadoc/org/qbroker/node/SwitchNode.html">SwitchNode</a>.
 If you want to fully manipulate the message and also to generate a new message
 as a result, you should consider to plugin your class into
-<a HREF="/javadoc/org/qbroker/node/ActionNode.html">ActionNode</a>.
+<a HREF="javadoc/org/qbroker/node/ActionNode.html">ActionNode</a>.
 After you read the javadocs, you will find it is easy to
 integrate your Java code with QFlow via plugins.  In fact, this is the easist
 way to have your Java code running inside QFlow container and get all the
@@ -217,7 +217,7 @@ read the rest of the documentaion any more.  Isn't that wonderful?
 <a NAME="XQueue"></a>
 <H3> Working with XQueue </H3>
 <p>
-<a HREF="/javadoc/org/qbroker/common/XQueue.html">XQueue</a>
+<a HREF="javadoc/org/qbroker/common/XQueue.html">XQueue</a>
 is the interface of an internal queue with transaction support.
 It is designed for communications between multiple threads.  QFlow uses
 XQueue as the message channels between message nodes so that messages can flow
@@ -264,7 +264,7 @@ GlobalMask of the linked XQueues.
 <a NAME="Receiver"></a>
 <H3> Implementation of MessageReceiver </H3>
 <p>
-<a HREF="/javadoc/org/qbroker/receiver/MessageReceiver.html">MessageReceiver</a>
+<a HREF="javadoc/org/qbroker/receiver/MessageReceiver.html">MessageReceiver</a>
 is an interface to receive or pick up messages from a data
 source.  If the data source is a JMS Destination, the message will be passed to
 the output link directly.  Otherwise, MessageReceiver is supposed to create a
@@ -300,7 +300,7 @@ native resources in this method.
 </p>
 <p>
 To make the implementation a bit easier, an abstract class,
-<a HREF="/javadoc/org/qbroker/receiver/Receiver.html">Receiver</a>,
+<a HREF="javadoc/org/qbroker/receiver/Receiver.html">Receiver</a>,
 has been added to implement MessageReceiver with only two
 abstract methods, receive() and close().  The former is the public method for
 receiving messages and the latter is the public method to close resources.
@@ -317,7 +317,7 @@ Please pay attention to the part of reconnection and status control.
 <a NAME="Persister"></a>
 <H3> Implementation of MessagePersister </H3>
 <p>
-<a HREF="/javadoc/org.qbroker/persister/MessagePersister.html">MessagePersister</a>
+<a HREF="javadoc/org.qbroker/persister/MessagePersister.html">MessagePersister</a>
 is an interface to persist or deliver messages to a data
 destination.  It listens to a given XQueue for messages and tries to
 deliver them to a specific data destination.  If the destination is a JMS
@@ -354,7 +354,7 @@ native resources in this method.
 </p>
 <p>
 To make the implementation a bit easier, an abstract class,
-<a HREF="/javadoc/org/qbroker/persister/Persister.html">Persister</a>,
+<a HREF="javadoc/org/qbroker/persister/Persister.html">Persister</a>,
 has been added to implement MessagePersister with only two
 abstract methods, persist() and close().  The former is the public method for
 persisting messages and the latter is the public method to close resources.
@@ -371,7 +371,7 @@ Please pay attention to the part of reconnection and status control.
 <a NAME="Node"></a>
 <H3> Implementation of MessageNode </H3>
 <p>
-<a HREF="/javadoc/org/qbroker/node/MessageNode.html">MessageNode</a>
+<a HREF="javadoc/org/qbroker/node/MessageNode.html">MessageNode</a>
 is an interface to process JMS Messages as a broker. The following four public
 methods are most important in the implementation of MessageNode:
 </p>
@@ -431,7 +431,7 @@ production.
 </p>
 <p>
 To make the implementation a bit easier, an abstract class,
-<a HREF="/javadoc/org/qbroker/node/Node.html">Node</a>,
+<a HREF="javadoc/org/qbroker/node/Node.html">Node</a>,
 has been added to implement MessageNode with only two abstract
 methods, propagate() and initRuleset().  The former is the public method for
 message propagation and the latter is a protected method for initialization of

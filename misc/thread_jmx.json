@@ -13,7 +13,7 @@
   "ExceptionTolerance": "-1",
   "URI": "service:jmx:rmi:///jndi/rmi://localhost:1762/jmxrmi",
   "Username": "sonicmq",
-  "Password": "QZ?P01",
+  "Password": "xxxx",
   "MBeanName": "java.lang:type=Threading",
   "AttributeName": "ThreadCount",
   "Pattern": "(\\d+)",

@@ -12,7 +12,7 @@
   "QuietPeriod": "30",
   "ExceptionTolerance": "-1",
   "URI": "tcp://localhost:2506",
-  "Username": "qbadm",
+  "Username": "monitor",
   "Password": "xxxx",
   "ObjectName": "Domain1.brQA01Container:ID=brQA01,category=metric,type=queue,name=EventQueue",
   "StatsLog": "/var/log/qbroker/stats/EventQueue.mq",

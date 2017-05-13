@@ -1,0 +1,55 @@
+{
+  "Name": "synthetic_dev",
+  "ClassName": "org.qbroker.monitor.SyntheticMonitor",
+  "Site": "DEVOPS",
+  "Type": "SyntheticMonitor",
+  "Category": "JBOSS",
+  "Description": "Synthetic monitor on web",
+  "Step": "1",
+  "Tolerance": "2",
+  "MaxRetry": "1",
+  "MaxPage": "1",
+  "QuietPeriod": "12",
+  "ExceptionTolerance": "-1",
+  "URI": "https://dev.example.com/",
+  "NextTask": [
+    {
+      "Operation": "waitAndSend",
+      "LocatorType": "By.id",
+      "LocatorText": "username",
+      "KeyData": "monitor",
+      "WaitTime": "5"
+    },
+    {
+      "Operation": "findAndSend",
+      "LocatorType": "By.id",
+      "LocatorText": "password",
+      "KeyData": "xxxx"
+    },
+    {
+      "Operation": "findAndClick",
+      "LocatorType": "By.id",
+      "LocatorText": "loginbutton"
+    },
+    {
+      "Operation": "waitAndClick",
+      "LocatorType": "By.linkText",
+      "LocatorText": "Search Information",
+      "WaitTime": "10"
+    },
+    {
+      "Operation": "waitAndClick",
+      "LocatorType": "By.linkText",
+      "LocatorText": "Logout",
+      "WaitTime": "2"
+    }
+  ],
+  "StatsLog": "/var/log/qbroker/stats/dev.syn",
+  "ActiveTime": {
+    "TimeWindow": [
+      {
+        "Interval": "00:00:00-24:00:00"
+      }
+    ]
+  }
+}

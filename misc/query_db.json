@@ -12,8 +12,8 @@
   "QuietPeriod": "12",
   "ExceptionTolerance": "2",
   "DBDriver": "oracle.jdbc.driver.OracleDriver",
-  "URI": "jdbc:oracle:thin:@webdb:1530:webdb1",
-  "Username": "qbadm",
+  "URI": "jdbc:oracle:thin:@localhost:1530:webdb1",
+  "Username": "monitor"
   "Password": "xxxx",
   "SQLQuery": "SELECT hostname FROM problems WHERE RESPONSIBLE_GROUP = &apos;admin&apos; AND MONITOR = 1 AND RESOLVED = 1",
   "PatternGroup": [{

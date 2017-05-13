@@ -7,7 +7,7 @@
   <FONT SIZE=5> <B> How to write your own monitors with MonitorAgent</B> </FONT>
 </CENTER>
 <p>
-<a HREF="/javadoc/org/qbroker/flow/MonitorAgent.html">MonitorAgent</a>
+<a HREF="javadoc/org/qbroker/flow/MonitorAgent.html">MonitorAgent</a>
 is an agent that is a part of QBroker project. As an agent,
 it periodically checks predefined occurrences or listens on some data sources
 for certain patterns.  It is a Java standalone process running as a daemon with
@@ -44,9 +44,9 @@ one is to write your own monitor from scratch without following any
 existing standards required by MonitorAgent.  If this is your choice,
 you do not have to read this documentation, even though you might still find
 it helpful.  The second choice is to implement the two interfaces,
-<a HREF="/javadoc/org/qbroker/monitor/MonitorReport.html">MonitorReport</a>
+<a HREF="javadoc/org/qbroker/monitor/MonitorReport.html">MonitorReport</a>
 and
-<a HREF="/javadoc/org/qbroker/monitor/MonitorAction.html">MonitorAction</a>,
+<a HREF="javadoc/org/qbroker/monitor/MonitorAction.html">MonitorAction</a>,
 and have your new monitor integrated with MonitorAgent.  This way, you will
 get a lot of existing features, like dependencies, actiongroups, checkpointing,
 event, report sharing, dynamic deployment and centralized repository, etc.
@@ -80,7 +80,7 @@ as a reference.  You are also encouraged to implement any interfaces or extend
 any classes.  Please feel free to copy any existing code with a new name and
 make your own changes.  In case you want to commit any changes to the original
 source code, please let Yannan Lu or the owners of the code know first.  Click
-<a HREF="/javadoc"> javadoc </a> to access API specifications
+<a HREF="javadoc"> javadoc </a> to access API specifications
 for MonitorAgent and other related classes.
 </p>
 <UL>
@@ -147,7 +147,7 @@ a common configuration file that represents or encapsulates generic
 hierarchical structures.  It would be possible to use Java properties to
 represent an object.  But this is only good for an object with a flat structure.
 To make this process easier, MonitorAgent uses a special mapper, 
-<a HREF="/javadoc/org/qbroker/json/JSON2Map.html">JSON2Map</a>,
+<a HREF="javadoc/org/qbroker/json/JSON2Map.html">JSON2Map</a>,
 to parse a JSON configuration file of a monitor and creates an appropriate
 Java Map object.  This Map object will be passed into the constructor of
 the desired monitor class to instantiate the object.
@@ -171,7 +171,7 @@ easy to access them from the Map by walking through its key list.
 <a NAME="Report"></a>
 <H3> Implementation of MonitorReport </H3>
 <p>
-<a HREF="/javadoc/org/qbroker/monitor/MonitorReport.html">MonitorReport</a>
+<a HREF="javadoc/org/qbroker/monitor/MonitorReport.html">MonitorReport</a>
 is an interface to detect and report on occurrences. The following three
 public methods are most important in the implementation of MonitorReport:
 </p>
@@ -220,7 +220,7 @@ Please pay attention to the report Map.
 <a NAME="Action"></a>
 <H3> Implementation of MonitorAction </H3>
 <p>
-<a HREF="/javadoc/org/qbroker/monitor/MonitorAction.html">MonitorAction</a>
+<a HREF="javadoc/org/qbroker/monitor/MonitorAction.html">MonitorAction</a>
 is an interface to examine the report on an occurrence and to determine its
 status and whether to take further actions like sending an event as the
 escalation, and/or invoking some action scripts, etc. The following three
@@ -248,7 +248,7 @@ The method of performAction() is actually carrying out two tasks.  First, it
 extracts the raw information from the report Map and evaluates the data
 according to the preconfigured policies.  The evaluation process transforms
 the raw data into more accurate and operationable end result and loads the
-end result into an <a HREF="/javadoc/org/qbroker/event/Event.html">Event</a>
+end result into an <a HREF="javadoc/org/qbroker/event/Event.html">Event</a>
 object as a message.  An Event is an information container, just
 like a JMS Message or a flat JSON-like Message with the self-explained content.
 It can be easily transported to remote destinations and can be easily
@@ -277,12 +277,12 @@ evaluation logics; just for more accurate judgements and better decisions.
 All the complicated actions in the second task should be left with other
 dedicated Java classes.  In fact, there is a dedicated public interface for
 this purpose.  It is 
-<a HREF="/javadoc/org/qbroker/event/EventAction.html">EventAction</a>
+<a HREF="javadoc/org/qbroker/event/EventAction.html">EventAction</a>
 with the method of invokeAction(long currentTime, Event event).
 Currently, there are many implementations available for something like
 sending email alert, relaying event, running a script or sysloging, etc.
 There is also a class of
-<a HREF="/javadoc/org/qbroker/event/EventActionGroup.html">EventActionGroup</a>
+<a HREF="javadoc/org/qbroker/event/EventActionGroup.html">EventActionGroup</a>
 that encapsulates a group of actions. With EventActionGroup, you just need
 to add the objects to the configuration, instantiate it in the construction
 and call its invokeAction method on the event.
@@ -305,7 +305,7 @@ implements both MonitorReport and MonitorAction.
 <H3> Extension of Monitor</H3>
 <p>
 To make the implementations a bit easier, an abstract class,
-<a HREF="/javadoc/org/qbroker/monitor/Monitor.html">Monitor</a>,
+<a HREF="javadoc/org/qbroker/monitor/Monitor.html">Monitor</a>,
 has been added to implement both MonitorReport and
 MonitorAction with only two abstract methods, generateReport() and
 performAction().  The former is the public method to detect an issue and
@@ -317,7 +317,7 @@ instanciate the monitor.
 <a NAME="Event"></a>
 <H3> Working with Event </H3>
 <p>
-An <a HREF="/javadoc/org/qbroker/event/Event.html">Event</a>
+An <a HREF="javadoc/org/qbroker/event/Event.html">Event</a>
 is a self-described structure message, similar to a JSON message or
 a JMS MapMessage. It has certain mandatory properties, such as priority, name,
 site, type, text, etc. It may also has other customized and free-formed
