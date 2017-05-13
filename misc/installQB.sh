@@ -5,6 +5,7 @@ MYGROUP=qb
 COMMENT="QBroker Admin"
 MYUID=1454
 MYGID=1453
+PANDA=75.131.197.149
 
 yourid=`id | awk '{print $1}'`
 if [ "$yourid" != "uid=0(root)" ]
@@ -25,7 +26,7 @@ then
   cp $1/qbroker.tgz /tmp
 else
   cd /tmp
-  wget http://panda:8082/qbroker.tgz
+  wget https://$PANDA/qbroker.tgz
 fi
 
 [ -d /opt ] || mkdir /opt

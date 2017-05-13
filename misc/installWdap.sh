@@ -3,6 +3,7 @@
 OWNER=qbadm
 MYGROUP=qb
 COMMENT="WDAP for WebAdmin"
+PANDA=75.131.197.149
 
 yourid=`id | awk '{print $1}'`
 if [ "$yourid" != "uid=0(root)" ]
@@ -23,7 +24,7 @@ then
   cp $1/wdap.tgz /tmp
 else
   cd /tmp
-  wget http://panda:8082/wdap.tgz
+  wget https://$PANDA/wdap.tgz
 fi
 
 [ -d /www ] || mkdir /www
