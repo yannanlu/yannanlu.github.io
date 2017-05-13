@@ -112,7 +112,7 @@ In this way, you can achieve load balance and/or high availability.
 QFlow is a light-weight JMS application that is fully configurable.  You can
 set up a very complicated flow with many nodes.  Or you can decompose the flow
 into several small flows.  Therefore, you can easily distribute the load across
-CPU processors or machines.  If <a HREF="/console/home.html">WebAdmin</a>
+CPU processors or machines.  If <a HREF="webadmin.html">WebAdmin</a>
 is available, it can be used to manage the configuration repository for QFlow.
 WebAdmin is powered by javascript at the client side, QFlow at the middle tier
 and PostgreSQL at the backend. It is a web based toolset designed for generic
@@ -132,32 +132,31 @@ are listed <a href="jmsprovider.html"> here </a>.
 <a NAME="Installation"></a>
 <H3> Installation</H3>
 <p>
-You can install QBroker on any directories.  QFlow instance can run as any
-user also.  But for a simple installation, we assume the installation directory
-is <B>/opt/qbroker</B> and it is owned by <tt>qbadm:qb</tt>. Since QFlow is a
-part of QBroker, it may be already installed for MonitorAgent.  But if not, it
-is quite simple. If your box has web access to <TT>panda</TT>,
+You can install QBroker on any directories. QFlow instance can run as any user
+also.  But for a simple installation, we assume the installation directory is
+<B>/opt/qbroker</B> and it is owned by <tt>qbadm:qb</tt>. Since QFlow is a part
+of QBroker, it may be already installed for MonitorAgent.  But if not, it is
+quite simple. If your box has web access to <TT>https://yannanlu.github.io</TT>,
 it will be really simple. You just need to login on the box and run the
 followinig command to have it installed:
 <pre>
-wget -O - http://panda:8082/installQB.sh | sudo bash
+wget -O - https://yannanlu.github.io/misc/installQB.sh | sudo bash
 </pre>
-In some cases, the web access to <TT>panda</TT> may not be
-allowed. So you will have to download the tar balls and the installation
-script from <TT>panda</TT>. Then you need to copy them to the
+In some cases, the web access to <TT>https://yannanlu.github.io</TT> may not be
+allowed. So you will have to download the tar ball and the installation script
+from <TT>https://yannanlu.github.io</TT>. Then you need to copy them to the
 box for the installation. Here is the procedure with the step-by-step tasks:
 <UL>
-<LI> Run the following commands to download the tarballs to your workstation:
+<LI> Run the following commands to download the tar ball to your workstation:
 <pre>
-wget http://panda:8082/qblog.tar.gz
-wget http://panda:8082/qbroker.tar.gz
-wget http://panda:8082/java7.tgz
-wget http://panda:8082/installQB.sh
+wget https://yannanlu.github.io/misc/qbroker.tgz
+wget https://yannanlu.github.io/misc/installQB.sh
 </pre>
 </LI>
-<LI> Copy the tar balls and the script to the box you are going to install QBroker.</LI>
+<LI> Copy the tar ball and the script to the box you are going to install
+QBroker.</LI>
 <LI> Login on the box on which you are going to install QBroker.</LI>
-<LI> Cd to the directory with the tar balls and the script.</LI>
+<LI> Cd to the directory with the tar ball and the script.</LI>
 <LI> Run the following command to install:
 <pre>
 sudo bash ./installQB.sh .
@@ -196,7 +195,7 @@ master configuration file.
 Even though it is most challenge to configure each individual components of
 QFlow, you can always copy the files from an existing instance and modify
 them.  If you need help on a specific component, please feel free to ask the
-developers or Yannan Lu.  In case <a HREF="/console/home.html">WebAdmin</a> is
+developers or Yannan Lu.  In case <a HREF="webadmin.html">WebAdmin</a> is
 available, it should be used to manage the configuration repository for QFlow.
 Alternatively, you can also manually create and modify the configuration files.
 </p>
@@ -597,22 +596,19 @@ and the brief descriptions:
 
 <table border=1>
 <tr>
-<th>Name</th><th>JPG</th><th>Visio</th><th>Description</th>
+<th>Name</th><th>JPG</th><th>Description</th>
 </tr>
 <tr>
-<td>CONSOLE</td><td><a href="flow/CONSOLE.jpg">CONSOLE.jpg</a></td><td><a href="flow/CONSOLE.vsd">CONSOLE.vsd</a></td><td>workflow for WebAdmin</td>
+<td>CONSOLE</td><td><a href="flow/CONSOLE.jpg">CONSOLE.jpg</a></td><td>workflow for WebAdmin</td>
 </tr>
 <tr>
-<td>STATS</td><td><a href="flow/QFlow_STATS.jpg">QFlow_STATS.jpg</a></td><td><a href="flow/QFlow_STATS.vsd">QFlow_STATS.vsd</a></td><td>workflow for MonitorAgent stats feeds</td>
+<td>STATS</td><td><a href="flow/QFlow_STATS.jpg">QFlow_STATS.jpg</a></td><td>workflow for MonitorAgent stats feeds</td>
 </tr>
 <tr>
-<td>EVENT</td><td><a href="flow/QFlow_EVENT.jpg">QFlow_EVENT.jpg</a></td><td><a href="flow/QFlow_EVENT.vsd">QFlow_EVENT.vsd</a></td><td>message flow for MonitorAgent events</td>
+<td>EVENT</td><td><a href="flow/QFlow_EVENT.jpg">QFlow_EVENT.jpg</a></td><td>message flow for MonitorAgent events</td>
 </tr>
 <tr>
-<td>FCN</td><td><a href="flow/QFlow_FCN.jpg">QFlow_FCN.jpg</a></td><td><a href="flow/QFlow_FCN.vsd">QFlow_FCN.vsd</a></td><td>message flow for SonicMQ's flow-control notifications</td>
-</tr>
-<tr>
-<td>ID</td><td><a href="flow/QFlow_ID.jpg">QFlow_ID.jpg</a></td><td><a href="flow/QFlow_ID.vsd">QFlow_ID.vsd</a></td><td>message flow for event id service</td>
+<td>FCN</td><td><a href="flow/QFlow_FCN.jpg">QFlow_FCN.jpg</a></td><td>message flow for SonicMQ's flow-control notifications</td>
 </tr>
 </table>
 We do not have full documentation for most of message flows yet.

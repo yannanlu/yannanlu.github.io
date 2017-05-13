@@ -88,26 +88,24 @@ By default, MonitorAgent will be installed in <B>/opt/qbroker</B> and owned by
 <H3>Unix Platform</H3>
 <p>
 The installation on Unix platform is simple. If your box has web access to
-<TT>panda</TT>, it will be really simple. You just need to
+<TT>https://yannanlu.github.io</TT>, it will be really simple. You just need to
 login on the box and run the followinig command to have it installed:
 </p>
 <pre>
-wget -O - http://panda:8082/installQB.sh | sudo bash
+wget -O - https://yannanlu.github.io/misc/installQB.sh | sudo bash
 </pre>
-In some cases, the web access to <TT>panda</TT> may not be
-allowed. So you will have to download the tar balls and the installation
-script from <TT>panda</TT>. Then you need to copy them to the
+In some cases, the web access to <TT>https://yannanlu.github.io</TT> may not be
+allowed. So you will have to download the tar ball and the installation script
+from <TT>https://yannanlu.github.io</TT>. Then you need to copy them to the
 box for the installation. Here is the procedure with the step-by-step tasks:
 <UL>
 <LI> Run the following commands to download the tarballs to your workstation:
 <pre>
-wget http://panda:8082/qblog.tar.gz
-wget http://panda:8082/qbroker.tar.gz
-wget http://panda:8082/java7.tgz
-wget http://panda:8082/installQB.sh
+wget https://yannanlu.github.io/misc/qbroker.tgz
+wget https://yannanlu.github.io/misc/installQB.sh
 </pre>
 </LI>
-<LI> Copy the tar balls and the script to the box you are going to install
+<LI> Copy the tar ball and the script to the box you are going to install
 QBroker.</LI>
 <LI> Login on the box on which you are going to install QBroker.</LI>
 <LI> Cd to the directory with the tar balls and the script.</LI>
@@ -308,7 +306,7 @@ asynchronous deployment.  Either way, you do not have to login on each of
 the box to do the task again and again.  The command line utility will save
 your time, especially when you are dealing with clusters with multiple boxes.
 <p>
-By default, the repository is on <TT>panda:/www/wdap/docroot/agent</TT>.
+By default, the repository is on <TT>/www/wdap/docroot/agent</TT>.
 Since MonitorAgent runs as qbadm, you will have to have the access to modify
 them. For your own domain, you can choose a box with Nginx and have
 <TT>/www/wdap/docroot/agent</TT> copied over.

@@ -80,28 +80,26 @@ existing nodes. There is no need to write new codes in most cases.
 <h2> QBroker </h2>
 <p>
 The installation of QBroker is simple. If your box has web access to
-<TT>panda</TT>. It will be really simple. You just need to
+<TT>https://yannanlu.github.io</TT>. It will be really simple. You just need to
 login on the box and run the followinig command to have it installed:
 <pre>
-wget -O - http://panda:8082/installQB.sh | sudo bash
+wget -O - https://yannanlu.github.io/misc/installQB.sh | sudo bash
 </pre>
 In some cases, the web access to <TT>panda</TT> may not be
-allowed. So you will have to download the tar balls and the installation
+allowed. So you will have to download the tar ball and the installation
 script from <TT>panda</TT>. Then you need to copy them to the
 box for the installation. Here is the procedure with the step-by-step info:
 <UL>
-<LI> Run the following commands to download the tarballs to your workstation:
+<LI> Run the following commands to download the tar ball to your workstation:
 <pre>
-wget http://panda:8082/qblog.tgz
-wget http://panda:8082/qbroker.tgz
-wget http://panda:8082/java7.tgz
-wget http://panda:8082/installQB.sh
+wget https://yannanlu.github.io/misc/qbroker.tgz
+wget https://yannanlu.github.io/misc/installQB.sh
 </pre>
 </LI>
-<LI> Copy the tar balls and the script to the box you are going to install
+<LI> Copy the tar ball and the script to the box you are going to install
 QBroker.</LI>
 <LI> Login on the box on which you are going to install QBroker.</LI>
-<LI> Cd to the directory with the tar balls and the script.</LI>
+<LI> Cd to the directory with the tar ball and the script.</LI>
 <LI> Run the following command to install:
 <pre>
 sudo bash ./installQB.sh .
@@ -126,22 +124,22 @@ that there is only one box to host the WebAdmin. In order to manage the
 configurations for various applications, it is also required the user accounts
 and groups for each applications. The installation of QBroker in the previous
 step is supposed to create the user account for <tt>qbadm:qb</tt> already.
-If your box has web access to <TT>panda</TT>. You just need to
-login on the box and run the followinig command to have it installed:
+If your box has web access to <TT>https://yannanlu.github.io</TT>. You just
+need to login on the box and run the followinig command to have it installed:
 </p>
 <pre>
-wget -O - http://panda:8082/installWdap.sh | sudo bash
+wget -O - https://yannanlu.github.io/misc/installWdap.sh | sudo bash
 </pre>
 <p>
-In some cases, the web access to <TT>panda</TT> may not be
-allowed. So you will have to download the tar balls and the installation
-script from <TT>panda</TT>. Then you can copy them to the
+In some cases, the web access to <TT>https://yannanlu.github.io</TT> may not be
+allowed. So you will have to download the tar ball and the installation script
+from <TT>https://yannanlu.github.io</TT>. Then you can copy them to the
 box for the installation. Here is the step-by-step tasks:
 <UL>
-<LI> Run the following commands to download the tarballs to your workstation:
+<LI> Run the following commands to download the tar ball to your workstation:
 <pre>
-wget http://panda:8082/wdap.tgz
-wget http://panda:8082/installWdap.sh
+wget https://yannanlu.github.io/misc/wdap.tgz
+wget https://yannanlu.github.io/misc/installWdap.sh
 </pre>
 </LI>
 <LI> Copy the tar ball and the script to the box you are going to install
@@ -617,7 +615,6 @@ sudo chmod g+w /var/log/tomcat
 <li> Use your favorite editor to open the file of <tt>/etc/default/tomcat</tt>.
 Make sure the following two lines are uncommented with the right values:
 <pre>
-JAVA_HOME="/opt/java/jdk1.7.0_75"
 TOMCAT_USER="qbadm"
 </pre>
 </li>
