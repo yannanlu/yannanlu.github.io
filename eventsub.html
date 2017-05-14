@@ -187,7 +187,7 @@ Problem with ##name## on ##hostname##:
 If errors persist, please contact the on-call.
 
 A brief information on the monitor and this type of message can be found at
-http://panda/docs/application/agent.html###type##
+https://yannanlu.github.io/agent.html###type##
 </PRE>
 where <TT>##hostname##</TT> is a variable in reference of the <TT>hostname</TT>
 property.  Once this template is rendered with an Event, the content
@@ -229,7 +229,7 @@ both inline Template and TemplateFile:
     },
     "Default": {
       "Subject": "##hostname##: ##priority## problem with ##name##",
-      "Template": "\nThis message was automatically generated.\nProblem with ##name## on ##hostname##:\n\n##compact##\nIf errors persist, please contact the on-call.\n\nA brief information on the monitor and this type of message can be found at http://panda/docs/application/agent.html###type##\n",
+      "Template": "\nThis message was automatically generated.\nProblem with ##name## on ##hostname##:\n\n##compact##\nIf errors persist, please contact the on-call.\n\nA brief information on the monitor and this type of message can be found at https://yannanlu.github.io/agent.html###type##\n",
     },
     ...
 }
