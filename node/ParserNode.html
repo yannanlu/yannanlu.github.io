@@ -32,9 +32,12 @@ indicating to parse the message body.
 <p>
 ParserNode also supports customized parsers via plugins.  In this case, the
 full ClassName of the parser and its ParserArgument must be well defined
-in the ruleset.  The developer of the plugin parser is supposed to document
-the details of ParserArgument.  ParserNode will load the parser and invokes
-the method to parse the message for the ruleset.
+in the ruleset. The class should have a public method of parse() that takes
+the String to be parsed as the only argument.  The returned object has to be
+either a Map or an Event.  It must have a constructor taking a Map, or a List,
+or just a String as the only argument for configurations. ParserNode will
+invoke the public method to parse the either message body or certain message
+property as a text.
 </p>
 <p>
 ParserNode always adds an extra ruleset for the nohit messages.  This nohit
@@ -61,7 +64,7 @@ Here are complete properties of rulesets for ParserNode.
 </TR>
 <TR>
 <TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> optional </TD>
-<TD> full classname of the plugin parser </TD> <TD> com.cnn.pses.common.Simpleparser </TD>
+<TD> full classname of the plugin parser </TD> <TD> org.qbroker.common.Simpleparser </TD>
 </TR>
 <TR>
 <TD> ResetOption </TD> <TD> integer </TD> <TD> optional </TD> <TD> option to reset properties </TD> <TD> 2 (default: 0) </TD>
@@ -80,6 +83,9 @@ Here are complete properties of rulesets for ParserNode.
 </TR>
 <TR>
 <TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of post format operations </TD> <TD> see example </TD>
 </TR>
 <TR>
 <TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>

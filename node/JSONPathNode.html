@@ -69,6 +69,9 @@ Here are complete properties of rulesets for JSONPathNode.
 <TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
 </TR>
 <TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of post format operations </TD> <TD> see example </TD>
+</TR>
+<TR>
 <TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
 </TR>
 <TR>
@@ -115,14 +118,19 @@ Here is an example of the JSONPath ruleset.
     }],
     "ResetOption": "1",
     "JSONPath": {
-      "ActionScript": "StartScript"
+      "ActionScript": ".Component[#{Name}=='##name##'].StartScript"
     }
   }],
   ...
 }
 </pre>
 where it extracts the content from the JSON payload and sets the value on the
-property of ActionScript.
+property of ActionScript. It expects the JSON payload contains a list of maps
+under the name of <b>Component</b>. In the expression, <tt>#{Name}</tt> is a
+variable referencing the value of <b>Name</b> in each of the maps.
+<tt>##name##</tt> is the place holder referencing the value of message property
+of <tt>name</tt>. This expression will select one map from the list and extracts
+the value of <b>StartScript</b> from the map.
 </p>
 
 <p>
@@ -144,7 +152,7 @@ Here is an example of JSONPathNode:
       "JMSType": "."
     }],
     "JSONPath": {
-      "FileName": "store.book[0].path"
+      "FileName": ".store.book[0].path"
     }
   }],
   "OutLink": ["parsed", {

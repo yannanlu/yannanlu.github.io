@@ -94,9 +94,6 @@ Here are complete properties of rulesets for ActionNode.
 <TD> MessageType </TD> <TD> string </TD> <TD> mandatory for type conversion only </TD> <TD> message type for the escalated messages </TD> <TD> jms_map </TD>
 </TR>
 <TR>
-<TD> FormatterArgument </TD> <TD> object </TD> <TD> optional </TD> <TD> list of format operations for the escalated messages </TD> <TD> see example </TD>
-</TR>
-<TR>
 <TD> ClassName </TD> <TD> alphanumeric with no spaces </TD> <TD> optional </TD>
 <TD> full classname of the plugin formatter </TD> <TD> </TD>
 </TR>
@@ -105,6 +102,9 @@ Here are complete properties of rulesets for ActionNode.
 </TR>
 <TR>
 <TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of post format operations for the escalated messages only </TD> <TD> see example </TD>
 </TR>
 <TR>
 <TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>

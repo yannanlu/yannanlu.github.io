@@ -106,7 +106,7 @@ EventCorrelator.
 <td> Type </td> <td> string </td> <td> mandatory </td> <td> type of the merger </td> <td> MessageSummary </td>
 </tr>
 <tr>
-<td> ClassName </td> <td> string </td> <td> mandatory </td> <td> full class name of implementation for EventMerger </td> <td> org.qbroker.node.EventSummary </td>
+<td> ClassName </td> <td> string </td> <td> mandatory </td> <td> full class name of implementation for EventMerger </td> <td> org.qbroker.event.EventSummary </td>
 </tr>
 <tr>
 <td> MinimumEventCount </td> <td> integer </td> <td> mandatory </td> <td> minimum number of the events </td> <td> 2 </td>
@@ -132,6 +132,9 @@ EventCorrelator.
 <tr>
 <td> PreferredOutLink </td> <td> alphanumeric with no spaces </td> <td> mandatory for bypass only </td> <td> name of the preferred outlink </td> <td> bypass </td>
 </tr>
+<TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of post format operations for summary events only </TD> <TD> see example </TD>
+</TR>
 <tr>
 <td> EventPattern </td> <td> list </td> <td> optional </td> <td> list of patterns to select events </td> <td> see example </td>
 </tr>

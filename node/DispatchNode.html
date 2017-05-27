@@ -10,13 +10,21 @@
 
 <p>
 DispatchNode is a router node that dispatch messages to various destinations
-with the support of load balance and/or redundency.  The incoming JMS messages
+with the support of load balance and/or redundancy.  The incoming JMS messages
 will be routed to various destinations (outlinks) according to their content,
-the load and preconfigured rulesets.  DispatchNode contains at least one
-predefined ruleset for the dispatch operation.  Each ruleset categorize
-messages into non-overlapping groups.  Therefore, each ruleset defines a unique
-message group and associates it with a specific destination.  DispatchNode
-should also have at least one OukLink as the destination.
+the load and preconfigured rulesets. DispatchNode contains one or more
+outlinks as the destinations. Those outlinks are grouped exclusively
+according to their group names. Within each group, all the oulinks are
+equivalent and backing up with each other in case of failure or high load.
+</p>
+<p>
+DispatchNode uses the predefined rulesets to dispatch incoming messages.
+These rulesets categorize messages into non-overlapping groups. Therefore,
+each rule defines a unique message group. The ruleset also specifies the
+association between the message group and the outlinks. For those messages
+falling off all defined rulesets, DispatchNode always creates an extra
+ruleset, nohit, to handle them. By default, nohit ruleset always uses the
+last outlink unless there is one defined explicitly.
 </p>
 <img vspace=10 halign=center src="DispatchNode.jpg" />
 <p>
@@ -27,35 +35,35 @@ the type of the ruleset is set to preferred, all the messages in the same
 ruleset will stick together and go to the same preferred destination.  In this
 case, their message affinity is honored. If the type of the ruleset is set to
 roundrobin, the node will dispatch messages in the same ruleset to one of the
-available destinations round-robinly. In this case, there is no fixed
-destination associated with the group. This way, we can distribute messages to
-multiple destinations for load balance. For the type of weighted, it is similar
-to the type of roundrobin except for that the routing decision is based on the
-load rather than in roundrobin way. If the rule is set to sticky, the incoming
-messages will be routed to their destinations according to the hash values of
-a perdefined key retrieved from the messages. Similar to the type of preferred,
-the message affinity is also honored for sticky rulesets.
+available destinations in the group round-robinly. In this case, there is no
+fixed destination associated with the group. This way, we can distribute
+messages to multiple destinations for load balance. For the type of weighted,
+it is similar to the type of roundrobin except for that the routing decision
+is based on the load rather than in roundrobin way. If the rule is set to
+sticky, the incoming messages will be routed to their destinations according
+to the hash values of a perdefined key retrieved from the messages. Similar to
+the type of preferred, the message affinity is also honored for sticky rulesets.
 </p>
 <p>
 You can define as many rulesets as you want as long as it is under the limit.
 However, DispatchNode always creates an extra ruleset for those messages which
 do not match any predefined ruleset.  This extra ruleset is called <B>nohit</B>.
-The dispatch rule of nohit is roundrobin by default.  You can set it to the
-type of preferred so that all nohit messages stick to the specified destination.
+The dispatch rule of nohit is preferred by default.
 </p>
 <p>
 However, there may be a case that one of the destinations is not available
-or its load is too high. DispatchNode will find a good outlink and switch the
-bad outlin to the good one as the failover. The pending messages will be also
-moved over in the correct order. In order to do that, you have to enable the
-dynamic sessions by specifying the parameter of SessionTimeout. SessionTimeout
-determines how long to mark the outlink in pause temporarily before switching
-it to another outlink. Also you need to associate all the outlinks to their
-reports so that the node is able to query their status and load. You also need
-to specify the load threshold for the queue depth. The threshold should contain
-three numbers, LOW, MEDIUM and HIGH. The last, you have to set up reporters to
-watch the destinations and to update the shared reports. DispatchNode throttles
-the message flow along all outlinks according to the shared reports.
+or its load is too high. DispatchNode will find a good outlink and switch
+all messages on the bad outlink to the good one as a failover. The pending
+messages will be also moved over in the correct order. In order to do that,
+you have to enable the dynamic sessions by specifying the parameter of
+SessionTimeout. SessionTimeout determines how long to mark the outlink in
+pause temporarily before switching it to another outlink. Also you need to
+associate all the outlinks to their reports so that the node is able to query
+their status and load. You also need to specify the load threshold for the
+queue depth. The threshold should contain three numbers, LOW, MEDIUM and HIGH.
+The last, you have to set up reporters to watch the destinations and to update
+the shared reports. DispatchNode throttles the message flow along all outlinks
+according to the shared reports.
 </p>
 <p>
 DispatchNode has also a heartbeat that controls how often it queries the shared
@@ -120,13 +128,13 @@ Here are complete properties of rulesets for DispatchNode.
 <TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for preferred only </TD> <TD> name of the preferred outlink </TD> <TD> aps1_in </TD>
 </TR>
 <TR>
-<TD> OutLinkGroup </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the outlink group </TD> <TD> aps </TD>
-</TR>
-<TR>
 <TD> KeyTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the sticky key </TD> <TD> ##site## </TD>
 </TR>
 <TR>
 <TD> KeySubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text subsctitution for the sticky key </TD> <TD> s/^0// </TD>
+</TR>
+<TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of post format operations </TD> <TD> see example </TD>
 </TR>
 <TR>
 <TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>

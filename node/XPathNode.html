@@ -69,7 +69,7 @@ Here are complete properties of rulesets for XPathNode.
 <TD> ResetOption </TD> <TD> integer </TD> <TD> optional </TD> <TD> option to reset properties </TD> <TD> 2 (default: 0) </TD>
 </TR>
 <TR>
-<TD> XPathExpression </TD> <TD> map </TD> <TD> mandatory for XPath only </TD> <TD> for resetting properties of messages </TD> <TD> see example </TD>
+<TD> XPath </TD> <TD> map </TD> <TD> mandatory for XPath only </TD> <TD> for resetting properties of messages </TD> <TD> see example </TD>
 </TR>
 <TR>
 <TD> ListKey </TD> <TD> string </TD> <TD> key name of the XPath expression for list aggregation </TD> <TD> to select a list of items </TD> <TD> ID </TD>
@@ -79,6 +79,9 @@ Here are complete properties of rulesets for XPathNode.
 </TR>
 <TR>
 <TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
+</TR>
+<TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of post format operations </TD> <TD> see example </TD>
 </TR>
 <TR>
 <TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
@@ -96,7 +99,7 @@ Here are complete properties of rulesets for XPathNode.
 <TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting the user properties on the messages </TD> <TD> see example </TD>
 </TR>
 </TABLE>
-where XPathExpression specifies the details of the XPath expressions.
+where XPath specifies the details of the XPath expressions.
 PreferredOutLink can be defined for bypass rulesets only.  In this case,
 the messages of the group will not be parsed.  Here is an example for
 the bypass ruleset:
@@ -126,7 +129,7 @@ Here is an example of the XPath ruleset.
       "operation": "^start$"
     }],
     "ResetOption": "1",
-    "XPathExpression": {
+    "XPath": {
       "ActionScript": "/*/StartScript"
     }
   },{
@@ -157,7 +160,7 @@ Here is an example of XPathNode:
     "JMSPropertyGroup": [{
       "JMSType": "."
     }],
-    "XPathExpression": {
+    "XPath": {
       "MTC": "//MediaTimePoint",
       "RTC": "//MediaRelTimePoint",
       "Millis": "//MediaTimeMillis"
