@@ -36,8 +36,8 @@ properties for DocumentReceiver.  Most of them depends on the schemes.
 </p>
 
 <p>
-Currently, DocumentReceiver only supports MongoDB, in terms of the scheme
-of mongodb.  In the near future, it will support CouchDB. Here is the
+Currently, DocumentReceiver supports MongoDB and Riak, in terms of the scheme
+of mongodb or riak.  In the near future, it will support Cassandra. Here is the
 matrix of supported operations for various schemes:
 <TABLE border=1>
 <TR>
@@ -45,6 +45,9 @@ matrix of supported operations for various schemes:
 </TR>
 <TR>
 <TD> mongodb </TD> <TD> findone </TD> <TD> query documents from a collection </TD>
+</TR>
+<TR>
+<TD> riak </TD> <TD> fetch </TD> <TD> query documents from a bucket </TD>
 </TR>
 </TABLE>
 </p>
