@@ -51,10 +51,11 @@ CacheNode also supports the invalidation rulesets. The invalidation ruleset
 is simliar to the cache ruleset.  The only difference is that the former
 has also defined TargetRule. TargetRule specifies the name of a cache ruleset
 for invaliadations. Its KeyTemplate is used to generate group keys for
-invalidations. Each message of an invalidation ruleset will be routed to the
-outlink directly. Once the response is successfullycollected, CacheNode will
-invalidate the cache of the target ruleset based on the group keys. Currently,
-only the request type of JDBC is fully supported.
+invalidations. Each message of an invalidation ruleset will be routed to its
+outlink directly. Once the response is successfully collected, CacheNode will
+invalidate the cache of the target ruleset based on the group keys. When you
+define an invalidation ruleset, make sure the ruleset referenced by the
+TargetRule has already been defined before the invalidation ruleset.
 </p>
 <p>
 If a ruleset has its preferred outlink to one of the collectibles but

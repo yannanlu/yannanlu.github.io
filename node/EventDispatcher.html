@@ -60,10 +60,11 @@ and RULE_PEND.  RULE_PEND is for number of cached topics, RULE_SIZE for
 number of preliminary hits, whereas RULE_COUNT is for number of real hits.
 </p>
 <p>
-You are free to choose any names for the four fixed outlinks.  But
-EventDispatcher always assumes the first outlink for pool, the second for
-bypass, the third for failure and the last for nohit.  Any two or more outlinks
-can share the same outlink name.  It means these outlinks are sharing the same
+You are free to choose any names for these four fixed outlinks.  But
+EventDispatcher always assumes the first outlink as the pool for requests,
+the second for bypass messages, the third for failures and the last for nohit
+messages.  Any two or more outlinks can share the same outlink name.  If some
+of them share the same name, it means these outlinks are sharing the same
 output channel.
 </p>
 <p>

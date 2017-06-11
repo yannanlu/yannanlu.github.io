@@ -1,0 +1,215 @@
+<html>
+<head>
+<title>MessageNode</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> RequestNode </B> </FONT>
+</CENTER>
+
+<p>
+RequestNode picks up JMS messages as requests or their async responses from
+the uplink and processes them according to their content and the pre-defined
+rulesets. There are four fixed outlinks, done, bypass, failure, and nohit,
+as well as the request outlink for collectiables. For a request message,
+RequestNode routes it to the request outlink first. Once the message is
+collected from the outlink, it will be cached with a unique key waiting for
+the asynchonous reply. When a response message finally arrives, RequestNode
+extracts the unique key from it and looks for the corresponding request
+message from the cache. If the request message is found, RequestNode loads
+the response to the request message and routes it to the outlink of done.
+The response message will be routed to the outlink of bypass afterwards.
+This is called that the request message has been claimed by its response.
+If there is no corresponding request found for the response message, it will
+be routed to the outlink of nohit. In case that a cached key has expired,
+its request message will be flushed to the outlink of failure. Eventually,
+all the claimed keys or expired keys will be removed from the cache. If an
+incoming message is neither a request nor a response, RequestNode will treat
+it as a bypass and routes it to one of the four fixed outlinks without any
+delay. Since RequestNode does not consume any message, any incoming message
+has to find a way out via one of the four fixed outlinks.
+</p>
+<img vspace=10 halign=center src="RequestNode.jpg" />
+<p>
+RequestNode contains a number of pre-defined rulesets.  These rulesets
+categorize messages into non-overlapping groups.  Therefore, each rule
+defines a unique message group.  The ruleset also defines the cache or claim
+options for the messages in each group as well as the other parameters used
+in the process. Furthermore, RequestNode always creates one extra ruleset,
+nohit.  The ruleset of nohit is for all the messages not hitting any of
+the filters.
+</p>
+<p>
+You are free to choose any names for the first four fixed outlinks.  But
+RequestNodee always assumes the first outlink for done, the second for
+bypass, the third for failure and the fourth for nohit. The rest of the
+outlinks are for collectibles. It is OK for those first four fixed outlinks
+to share the same name. Please make sure the first fixed outlink has the
+actual capacity no less than that of the uplink.
+</p>
+<p>
+Apart from the common properties, there are some implementation specific
+properties for RequestNode.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Heartbeat </TD> <TD> integer </TD> <TD> optional </TD> <TD> frequency in second to run a sanity check on pending requests </TD> <TD> 60 (default: 30) </TD>
+</TR>
+</TABLE>
+</p>
+
+<p>
+The request operation is executed via the pre-defined rulesets. Therefore,
+the configuration of the rulesets is critical to the operations of RequestNode.
+Here are complete properties of rulesets for RequestNode.
+
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Name </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the ruleset </TD> <TD> event </TD>
+</TR>
+<TR>
+<TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory </TD> <TD> name of the preferred outlink </TD> <TD> query </TD>
+</TR>
+<TR>
+<TD> RuleType </TD> <TD> string </TD> <TD> mandatory for replies </TD> <TD> for responses only </TD> <TD> reply </TD>
+</TR>
+<TR>
+<TD> FieldName </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the property to be formatted as the request </TD> <TD> url </TD>
+</TR>
+<TR>
+<TD> ReplyQTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template to build the request </TD> <TD> http://##hostname## </TD>
+</TR>
+<TR>
+<TD> ReplyQSubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text subsctitution on the request </TD> <TD> s/^0// </TD>
+</TR>
+<TR>
+<TD> TimeToLive </TD> <TD> integer </TD> <TD> optional </TD> <TD> seconds to expire the cache items </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> KeyTemplate </TD> <TD> string </TD> <TD> optional </TD> <TD> template for the cache key </TD> <TD> ##Count## </TD>
+</TR>
+<TR>
+<TD> KeySubstitution </TD> <TD> string </TD> <TD> optional </TD> <TD> text subsctitution for the cache key </TD> <TD> s/^0// </TD>
+</TR>
+<TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of post format operations </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> JMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XJMSPropertyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on properties to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> PatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to select messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> XPatternGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of pattern groups on body to exclude messages </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting message properties on its final exit </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where KeyTemplate is to build the unique key for cache or for responses.
+RuleType specifies the rule is for responses only.  PreferredOutLink specifies
+the outlink for the requests. If it is one of the fixed outlinks (final exits),
+the ruleset is a bypass. Here is an example of the bypass ruleset.
+<pre>
+{
+  ..
+  "Ruleset": [{
+    "Name": "bypass",
+    "PreferredOutLink": "done",
+    "JMSPropertyGroup": [{
+      "JMSType": "^score$"
+    }]
+  }],
+  ...
+}
+</pre>
+where it sends the messages to the outlink of done without processing them.
+</p>
+
+<p>
+Here is an example of RequestNode:
+
+<pre>
+{
+  "Name": "node_request",
+  "ClassName": "org.qbroker.node.RequestNode",
+  "Description": "for async requests",
+  "Operation": "request",
+  "LinkName": "request",
+  "Capacity": "32",
+  "DisplayMask": "0",
+  "XAMode": "1",
+  "Debug": "31",
+  "Ruleset": [{
+    "Name": "query",
+    "PreferredOutLink": "auth",
+    "RequestType": "jdbc",
+    "JMSPropertyGroup": [{
+      "operation": "."
+    }],
+    "PatternGroup": [{
+      "Pattern": ["^SELECT "]
+    }],
+    "TimeToLive": "1800",
+    "KeyTemplate": "##body##"
+  },{
+    "Name": "update",
+    "PreferredOutLink": "auth",
+    "RequestType": "jdbc",
+    "TargetRule": "query",
+    "JMSPropertyGroup": [{
+      "operation": ".",
+      "SQL": "^(INSERT|UPDATE|DELETE) "
+    }],
+    "KeyTemplate": "##SQL##"
+  },{
+    "Name": "static",
+    "PreferredOutLink": "done",
+    "JMSPropertyGroup": [{
+      "pubURI": "."
+    }],
+    "KeyTemplate": "##pubURI##",
+    "StaticCache": {
+      "fluit-1": "apple",
+      "fluit-2": "orange",
+      "fluit-3": "grape",
+      "fluit-4": "kiwi"
+    }
+  }],
+  "OutLink": [
+    {
+      "Name": "done",
+      "Capacity": "48",
+      "Partition": "40,8"
+    },{
+      "Name": "bypass",
+      "Capacity": "48",
+      "Partition": "36,4"
+    },{
+      "Name": "failure",
+      "Capacity": "48",
+      "Partition": "36,4"
+    },{
+      "Name": "nohit",
+      "Capacity": "32",
+      "Partition": "0,4"
+    },
+    "queue"
+  ]
+}
+</pre>
+where there are two rulesets, one for requests and the other for responses.
+</p>
+
+</body>
+</html>
