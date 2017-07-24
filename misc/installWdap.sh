@@ -24,7 +24,7 @@ then
   cp $1/wdap.tgz /tmp
 else
   cd /tmp
-  wget https://$PANDA/wdap.tgz
+  wget --no-check-certificate https://$PANDA/wdap.tgz
 fi
 
 [ -d /www ] || mkdir /www

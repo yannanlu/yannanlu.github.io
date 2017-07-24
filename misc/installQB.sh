@@ -26,7 +26,7 @@ then
   cp $1/qbroker.tgz /tmp
 else
   cd /tmp
-  wget https://$PANDA/qbroker.tgz
+  wget --no-check-certificate https://$PANDA/qbroker.tgz
 fi
 
 [ -d /opt ] || mkdir /opt
