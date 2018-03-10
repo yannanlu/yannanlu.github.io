@@ -121,7 +121,7 @@ configuration repository and carry out the routine operation tasks via web
 browsers such as Chrome or Safari.
 </p>
 <p>
-QFlow requires the latest qbroker-1.2.0.jar. The source code is at
+QFlow requires the latest qbroker-1.2.1.jar. The source code is at
 <a href="http://github.com/yannanlu/qbroker">GitHub</a>.
 If any JMS implementation is used, QFlow also requires the vendors' jar files
 and their JNDI services.  If the implementation is not pure Java, you also need
@@ -367,7 +367,8 @@ Here is an example of the definition for ConfigurationRepository:
   "QuietPeriod": "12",
   "ExceptionTolerance": "2",
   "URI": "http://panda:8082/flow/FCN/flow.json",
-  "EncryptedAuthorization": "xxxx==",
+  "Username": "omadm",
+  "Password": "xxxx",
   "MaxBytes": "0",
   "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+\\.\\d+ \\w+)",
   "DateFormat": "EE, dd MMM yy HH:mm:ss.SSS zz",
@@ -385,7 +386,8 @@ Here is an example of the definition for ConfigurationRepository:
       "ClassName": "org.qbroker.monitor.URLMonitor",
       "URI": "http://panda:8082/flow/FCN/flow.json",
       "Operation": "HEAD",
-      "EncryptedAuthorization": "xxxx==",
+      "Username": "omadm",
+      "Password": "xxxx",
       "MaxBytes": "0",
       "Pattern": "Last-[mM]odified: (\\w+, \\d+ \\w+ \\d+ \\d+:\\d+:\\d+ \\w+)",
       "DateFormat": "EE, dd-MMM-yy HH:mm:ss zz",
@@ -414,7 +416,7 @@ as follows:
 
 <p>
 The reload works on MessageNode, MessagePersister and MessageReciever. For
-receivers and persisters, the reload will just replace them via instanciations.
+receivers and persisters, the reload will just replace them via instantiations.
 For nodes, the reload process depends on the changes of the nodes. If there is
 changes on the uplink and/or outlinks, the instance will be replaced. Otherwise,
 only the rulesets will be reloaded. On the node level, only changes on Debug,
@@ -531,7 +533,7 @@ Another example of Reporter is to set global variables via the static report
 for the container:
 <pre>
 {
-  "Name": "global_var",
+  "Name": "rpt_global_var",
   "ClassName": "org.qbroker.monitor.StaticReport",
   "Site": "DEVOPS",
   "Type": "StaticReport",
@@ -549,15 +551,15 @@ for the container:
 }
 </pre>
 where it defines a set of global variables for QFlow container at the startup.
-Therefore, all the nodes in the container will be able to resolve those global
-variables, such as <b>${hostname}</b>, in their instanciation stage. It is
+Therefore, all the nodes in the container will be able to reference those global
+variables, such as <b>${hostname}</b>, in their instantiation stage. It is
 really helpful if you are trying to deploy the same set of configuration files
-to multiple environments. You just only need to update global_var.json. In
-fact, StaticReport is also able to pick up environment variables. Here is an
-example:
+to multiple environments. You just only need to update rpt_global_var.json. In
+fact, StaticReport is also able to pick up properties from either a property
+file or a set of environment variables. Here is an example:
 <pre>
 {
-  "Name": "env_var",
+  "Name": "rpt_env_var",
   "ClassName": "org.qbroker.monitor.StaticReport",
   "Site": "DEVOPS",
   "Type": "StaticReport",
@@ -567,9 +569,9 @@ example:
   "ReportName": "GlobalProperties",
   "ReportClass": "org.qbroker.flow.QFlow",
   "EnvironmentVariable": {
-    "Scope": "DEV",
-    "Repos_URL": "tcp://localhost:8082",
-    "Policy": ""
+    "My_Scope": "Scope",
+    "My_URL": "Repos_URL",
+    "My_Policy": "Policy"
   },
   "StringProperty": {
     "hostname": "##hostname##",
@@ -578,11 +580,11 @@ example:
   }
 }
 </pre>
-where it defines a map with the keys and the default values. It will try to
-pick up the values for each of the keys as the environment variables. So those
-keys and the values are supposed to be defined in the command line for the JVM
-with something like, <TT> -DScope=PROD </TT>. If any one is not defined, the
-default value will be used.
+where it defines a map with the names of environment variables and the keys for
+the report. It will try to pick up the values for each of the names as the
+environment variables. Hence, those values will be saved under the keys for the
+report so that they will be referenced by the keys. The precedence of
+environment variables is the highest while that of inline properties the lowest.
 </p>
 
 <p>
@@ -889,7 +891,7 @@ If certain global variables are defined in the container, they can be used
 in the configuration of receivers. By default, <b>URI</b> and <b>LinkName</b>
 support the global variables. A global variable is something like:
 <b>${xxx}</b> where <b>xxx</b> is the name of the global variable. During
-the instanciation of the receiver, all the global variables will be resolved
+the instantiation of the receiver, all the global variables will be resolved
 as long as they are defined in the container. One of the usages of global
 variables is to define host specific environment variables.
 </p>
@@ -970,6 +972,11 @@ For configuations, here is the list of them with brief descriptions.
 </p>
 <TABLE border="1">
 <TR><TH>Persister</TH><TH>ClassName</TH><TH>Description</TH></TR>
+<TR>
+<TD> <a HREF="persister/AWSRequester.html"> AWSRequester </a></TD>
+<TD>org.qbroker.persister.AWSRequester</TD>
+<TD>AWSPersister sends rest requests to an AWS service via the messages</TD>
+</TR>
 <TR>
 <TD> <a HREF="persister/DocumentPersister.html"> DocumentPersister </a></TD>
 <TD>org.qbroker.persister.DocumentPersister</TD>
@@ -1165,7 +1172,7 @@ If certain global variables are defined in the container, they can be used
 in the configuration of persisters. By default, <b>URI</b> and <b>LinkName</b>
 support the global variables. A global variable is something like:
 <b>${xxx}</b> where <b>xxx</b> is the name of the global variable. During
-the instanciation of the persister, all the global variables will be resolved
+the instantiation of the persister, all the global variables will be resolved
 as long as they are defined in the container. One of the usages of global
 variables is to define host specific environment variables.
 </p>
@@ -1661,7 +1668,7 @@ where this node has two rulesets and two outlinks.
 If certain global variables are defined in the container, they can be used
 in the configuration of nodes. A global variable is something like:
 <b>${xxx}</b> where <b>xxx</b> is the name of the global variable. During
-the instanciation of the node, all the global variables will be resolved
+the instantiation of the node, all the global variables will be resolved
 as long as they are defined in the container. One of the usages of global
 variables is to define host specific environment variables.
 </p>

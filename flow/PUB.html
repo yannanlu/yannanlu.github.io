@@ -197,7 +197,7 @@ MessageReceiver. The XAMode is set to zero which means the node will keep
 generating messages without waiting for the previous message consumed. The
 TextMode is set to 1 which means all the messages will be TextMessage.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to generate time events according to the defined
 heartbeats. Those messages will be put into the internal queue, <b>root</b>.
 They will be picked up by the next linked node, <b>publsh_node</b>.
@@ -254,7 +254,7 @@ is routed to the outlink of <b>items</b>. Here is the configuration:
 where this node contains 5 template rules defined separately. Each template
 rule may contain a list of subscriptions sharing the same template.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to publish the incoming messages.
 </p>
 <b>3 Template Rule: sub_main</b>
@@ -348,7 +348,7 @@ the pubURI before sending the message to the outlink of web to download the
 feeds. Once the downloaded result is collected, the node will route message to
 the outlink of collected.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to process the incoming messages.
 The process message will be routed to the outlink of <b>collected</b>.
 </p>
@@ -389,7 +389,7 @@ persister:
 where <b>ClassName</b> specifies what class implementing the interface of
 MessagePersister. The URI specifies the transport.
 <p>
-With this configuration, QBroker as the container will instanciate the persister
+With this configuration, QBroker as the container will instantiate the persister
 and starts a dedicated thread to connect to the data source.  In case there is
 an error on the operations, the persister will try to reconnect to the data
 source automatically.
@@ -469,7 +469,7 @@ Here is the configuration:
 where there is only one rule. The output message will have the content like
 the end result of the use case.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to process the incoming messages.
 The message with the SQL property will be routed to the outlink of
 <b>pipe</b> for aggregation.
@@ -615,7 +615,7 @@ records from the DB.  Here is the configuration:
 where there is only one rule. The output message will have the property of SQL
 set.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to process the incoming messages.
 The message with the SQL property will be routed to the outlink of
 <b>query</b> for deletion.
@@ -658,7 +658,7 @@ and the DBDriver for the specific data source. The ResultType of 8 means
 the query result in JSON format. But in this case, the operation is either
 insert or delete.
 <p>
-With this configuration, QBroker as the container will instanciate the persister
+With this configuration, QBroker as the container will instantiate the persister
 and starts a dedicated thread to connect to the DB.  In case there is an error
 on the DB operations, the persister will try to reconnect to the data source
 automatically. If the persister is idle for too long, it will hibernate to

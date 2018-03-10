@@ -198,7 +198,7 @@ where <b>ClassName</b> specifies what class implementing the interface of
 MessageReceiver. Thanks to JMS standard, we just need to define the vendor
 specific JNDI properties to access the JMS services.
 <p>
-With this configuration, QBroker as the container will instanciate the receiver
+With this configuration, QBroker as the container will instantiate the receiver
 and starts a dedicated thread to listen on the queue. Once it receives a
 message, it will put the message to the internal queue, <b>root</b>. The message
 will be picked up by the next linked node, <b>select_node</b>.
@@ -258,7 +258,7 @@ is routed to the outlink of <b>items</b>. Here is the configuration:
 where this node contains only one rule named <b>list</b> with XPathExpression
 defined. The XPathExpression will be used to select the DOM nodes from the
 XML payload.  With this configuration, QBroker as the container will
-instanciate the node and starts a dedicated thread to select the incoming
+instantiate the node and starts a dedicated thread to select the incoming
 messages.
 <p>
 With the XML payload specified in the use case, the first message with selected
@@ -332,7 +332,7 @@ XPathExpression contains two keys, <b>ID</b> and <b>DOB</b>. The values of
 the attributes will stored in the properties with these keys. Therefore,
 the value of <b>ID</b> or <b>DOB</b> will be available for later use.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to process the incoming messages.
 The processed message will be routed to the outlink of <b>parsed</b> upon
 success. Otherwise, the message will be routed to either <b>failure</b>
@@ -422,7 +422,7 @@ After the last task finished, the message body should contain something like:
   &lt;president name="George Washington" birthplace="Westmoreland, Virginia Colony, British America" dob="02/22/1732"/&gt;
 </pre>
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to process the incoming messages.
 The process message will be routed to the outlink of <b>collected</b>.
 </p>
@@ -468,7 +468,7 @@ MessagePersister. Thanks to JDBC standard, we just need to define the URI
 and the DBDriver for the specific data source. The ResultType of 4 means
 the query result in XML format.
 <p>
-With this configuration, QBroker as the container will instanciate the persister
+With this configuration, QBroker as the container will instantiate the persister
 and starts a dedicated thread to connect to the DB.  In case there is an error
 on the DB operations, the persister will try to reconnect to the data source
 automatically. If the persister is idle for too long, it will hibernate to
@@ -608,7 +608,7 @@ will have the following content:
 </pre>
 As you can see, it is not a valid XML document yet.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to process the incoming messages.
 All the incoming messages will be routed to the outlink of <b>null</b>.
 The cached message with the aggregated data will be routed to the outlink
@@ -664,7 +664,7 @@ Here is the configuration:
 where there is only one rule. The output message will have the content like
 the end result of the use case.
 <p>
-With this configuration, QBroker as the container will instanciate the node
+With this configuration, QBroker as the container will instantiate the node
 and starts a dedicated thread to process the incoming messages.
 The message with the valid XML content will be routed to the outlink of
 <b>XML_OUT</b> for delivery.
@@ -698,7 +698,7 @@ Here is the configuration xml file for this node:
 where <b>ClassName</b> specifies what class implementing the interface of
 MessagePersister.
 <p>
-With this configuration, QBroker as the container will instanciate the persister
+With this configuration, QBroker as the container will instantiate the persister
 and starts a dedicated thread to listen on the queue. Once it receives a
 message from the internal queue, it will put the message to the JMS queue,
 <b>XML_OUT</b>.

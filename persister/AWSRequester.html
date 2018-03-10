@@ -1,0 +1,72 @@
+<html>
+<head>
+<title>MessagePersister</title>
+</head>
+<body>
+
+<CENTER>
+  <FONT SIZE=5> <B> AWSRequester </B> </FONT>
+</CENTER>
+
+<p>
+AWSRequester is a JMS message consumer that listens to an internal XQueue.
+It receives messages from the queue to convert them to AWS requests before
+sending them to an AWS service. Currently the only operation, display, is
+supported.
+</p>
+
+<p>
+Apart from the common properties, there are many implementation specific
+properties for RMQPersister.
+<TABLE border=1>
+<TR>
+<TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
+</TR>
+<TR>
+<TD> Profile </TD> <TD> string </TD> <TD> optional </TD> <TD> AWS Profile </TD> <TD> default </TD>
+</TR>
+<TR>
+<TD> AccessKeyId </TD> <TD> string </TD> <TD> optional </TD> <TD> AWS Access_Key_Id </TD> <TD> ASIAJM7IXW5MY5TSR3WQ </TD>
+</TR>
+<TR>
+<TD> SecretAccessKey </TD> <TD> string </TD> <TD> optional </TD> <TD> AWS Secret_Access_Key </TD> <TD> xxxx </TD>
+</TR>
+<TR>
+<TD> EncreyptedSecretAccessKey </TD> <TD> string </TD> <TD> optional </TD> <TD> AWS Secret_Access_Key in encrypted form </TD> <TD> xxxx </TD>
+</TR>
+<TR>
+<TD> RequestProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> key mapping for picking up properties from messages </TD> <TD> see example </TD>
+</TR>
+</TABLE>
+where most of the implementation specific properties are for AWS.
+</p>
+
+<p>
+Here is an example of AWSRequester:
+
+<pre>
+{
+  "Name": "pstr_token",
+  "ClassName": "org.qbroker.persister.AWSRequester",
+  "URI": "sts://aws.amazon.com",
+  "Operation": "display",
+  "LinkName": "token",
+  "AccessKeyId": "${AWS_ID}",
+  "EncryptedSecretAccessKey": "${AWS_SECRET}",
+  "ResultType": "8",
+  "DisplayMask": "6",
+  "RequestProperty": {
+    "user": "user",
+    "duration": "duration",
+    "policy": "body"
+  },
+  "StringProperty": {
+    "path": "",
+    "user": ""
+  }
+}
+</pre>
+</p>
+
+</body>
+</html>
