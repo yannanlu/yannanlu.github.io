@@ -327,6 +327,12 @@ subscription for developers:
     "Summary": "##date## ##priority## ##name## ##hostname## ##text##",
     "TemplateFile": "/opt/qbroker/templates/append.txt"
   },{
+    "URI": "https://hooks.slack.com/services/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",
+    "QueryTemplate": "payload={\"text\": \":warning: HOST: ##hostname##  SERVEICE: ##name##  MESSAGE: ##text##\"}",
+    "Substitution": [{
+      "text": "s/\"/'/g"
+    }]
+  },{
     "URI": "syslog://localhost",
     "Facility": "USER",
     "Message": "DEV: ##priority## ##hostname## ##category## ##name## ##text##",
@@ -354,12 +360,12 @@ The email content will be in the format defined in the template file of
 the event will be send to <TT>dev@qbroker.org</TT>.
 </p>
 <p>
-Please pay attention to the last <B>ActionGroup</B>.  It is used to send
-alert to Netcool via syslog.  Since Netcool can not take structural messages,
+Please pay attention to the last 2 actions in <B>ActionGroup</B>.  The last one
+is used to send alert to syslog.  Since syslog can not take structural messages,
 we have to build a single line with the <B>lastEntry</B> at the end of it.
 We have used Perl5 substitution to cut off the timestamp and something else
 on the property of <B>lastEntry</B>.  This is an example of modifying
-content of the event.
+content of the event. The other action is to post an alert to a Slack channel.
 </p>
 <p>
 The good thing for Pub/Sub model is that the publishers and subscribers are
