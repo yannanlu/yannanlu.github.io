@@ -1122,7 +1122,10 @@ the table listing all the common properties:
 <TD> StringProperty </TD> <TD> map </TD> <TD> optional </TD> <TD> controls what properties to log on the outgoing messages </TD> <TD> see example </TD>
 </TR>
 <TR>
-<TD> WaitTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for receive </TD> <TD> 500 (default: 1000) </TD>
+<TD> WaitTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for receive </TD> <TD> 50 (default: 500) </TD>
+</TR>
+<TR>
+<TD> SleepTime </TD> <TD> integer </TD> <TD> optional </TD> <TD> number of milli-seconds to sleep between deliveries </TD> <TD> 500 (default: 0) </TD>
 </TR>
 <TR>
 <TD> Timeout </TD> <TD> integer </TD> <TD> optional </TD> <TD> timeout in milli-second for retry sessions </TD> <TD> 1000 (default: 2000) </TD>

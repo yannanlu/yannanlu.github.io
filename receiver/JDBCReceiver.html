@@ -46,6 +46,9 @@ properties for JDBCReceiver.
 <TD> KeyColumn </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the column that monotonic increases </TD> <TD> END_TIME </TD>
 </TR>
 <TR>
+<TD> BodyColumn </TD> <TD> string </TD> <TD> optional </TD> <TD> name of the column for message body </TD> <TD> CONTENT </TD>
+</TR>
+<TR>
 <TD> TimePattern </TD> <TD> string </TD> <TD> optional </TD> <TD> Simple Time P
 attern to parse the KeyColumn for timestamp </TD> <TD> yyyy-MM-dd HH:mm:ss </TD>
 </TR>
@@ -55,6 +58,9 @@ attern to parse the KeyColumn for timestamp </TD> <TD> yyyy-MM-dd HH:mm:ss </TD>
 </TR>
 <TR>
 <TD> DependencyGroup </TD> <TD> list </TD> <TD> optional </TD> <TD> list of dependencis to control frequency of operations </TD> <TD> see example </TD>
+</TR>
+<TR>
+<TD> FormatterArgument </TD> <TD> list </TD> <TD> optional </TD> <TD> list of formatters to format selected messages </TD> <TD> see example </TD>
 </TR>
 </TABLE>
 where KeyColumn specifies the name of the column whose value will be used as
@@ -115,5 +121,16 @@ up by the receiver. For each new record, there is a new message generated and
 put to the queue.
 </p>
 
+<p>
+Here is an example for FormatterArgument to retrieve PID from message body:
+</p>
+
+<pre>
+  "FormatterArgument": [{
+    "FieldName": "PID",
+    "Template": ["##body##"],
+    "Substitution": ["s/\n/\r/g", "s/^.+&lt;PublicId&gt;(P\\d+)&lt;.+$/$1/"]
+  }]
+</pre>
 </body>
 </html>

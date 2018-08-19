@@ -60,6 +60,24 @@ properties for JMSPersister.
 <TR>
 <TD> Expiry </TD> <TD> integer </TD> <TD> optional </TD> <TD> milliseconds to add to message's expiration time </TD> <TD> 60000 (default: no change) </TD>
 </TR>
+<TR>
+<TD> RCField </TD> <TD> string </TD> <TD> optional for query or request </TD> <TD> field name to store return code (0 for success) </TD> <TD> (default: ReturnCode) </TD>
+</TR>
+<TR>
+<TD> MSField </TD> <TD> string </TD> <TD> optional for query </TD> <TD> field name to store MSQL statement </TD> <TD> (default: MSQL) </TD>
+</TR>
+<TR>
+<TD> ResultField </TD> <TD> string </TD> <TD> optional for query </TD> <TD> field name to store the number of msgs returned </TD> <TD> (default: MsgCount) </TD>
+</TR>
+<TR>
+<TD> ResultType </TD> <TD> integer </TD> <TD> optional for query </TD> <TD> type of the result </TD> <TD> 4 for XML (default: 1) </TD>
+</TR>
+<TR>
+<TD> Template </TD> <TD> string </TD> <TD> optional for query </TD> <TD> template for MSQL statement </TD> <TD> </TD>
+</TR>
+<TR>
+<TD> ResponseProperty </TD> <TD> list </TD> <TD> optional for request </TD> <TD> list of property fields copied from response msg </TD> <TD> see example </TD>
+</TR>
 </TABLE>
 where most of the implementation specific properties are for JNDI service.
 </p>
@@ -70,6 +88,7 @@ for IBM WebSphere MQ.  For IBM WebSphere MQ, here are the vendor-specific
 properties for JMSPersister.
 
 <TABLE border=1>
+<TR>
 <TH> Property Name </TH> <TH>Data Type</TH> <TH> Requirement </TH> <TH> Description </TH> <TH> Examples </TH>
 </TR>
 <TR>
