@@ -1,0 +1,136 @@
+Hands-on session for Ansible:
+
+1) install Ansible Core first
+$ sudo easy_install pip
+$ sudo -H pip install ansible==2.3.1
+$ sudo -H pip install boto
+$ sudo -H pip install boto3
+$ sudo -H pip uninstall python-dateutil
+$ sudo -H pip install python-dateutil==2.2
+
+It is recommended to install Ansible 2.3.1 since all the playbooks are tested with Ansible 2.3.1.
+
+2) set up ~/.aws/credentials with your access_key and secret_key as follows:
+[default]
+aws_access_key_id = xxxx
+aws_secret_access_key = yyyy
+# where xxxx and yyyy are the keys for your AWS account.
+
+3) set up the environment variable to disable ansible to check host key:
+$ export ANSIBLE_HOST_KEY_CHECKING=False
+
+4) create your ssh key pair or upload your ssh public key on AWS EC2 Console for the region. The default region for this lab is us-east-2. If you want to run lab tests on us-east-1, you need to provide vpc_id, etc to override the default variables. Make sure you write down the name for your ssh key-pair. It will be used for the variable of key_name in the command line.
+
+5) clone the playbook from github
+$ git clone https://github.com/yannanlu/playbook-ec2.git
+
+Since the repo has a bunch of submodules, make sure to run following commands to get them updated:
+$ cd playbook-ec2
+$ git submodule init
+$ git submodule update --recursive --remote
+
+If you have the repo cloned already, make suer to update it with the following commands:
+$ git pull
+$ git submodule update --recursive --remote
+
+6) run the playbook to provision two EC2 instances for ActiveMQ with an active-active network of brokers:
+
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=activemq provision.yml
+
+make sure to replace your.pem with the file name to your ssh private key and the value for the key_name.
+
+7) check outputs for errors and write down the public dns of two vms, verify the on the AWS console at the region of us-east-2.
+
+8) verify the service via the web pages:
+
+Point your browser to the following url to login into monit page:
+https://your_vm1_dns:2812
+https://your_vm2_dns:2812
+make sure to replace your_vm1_dns with the public dns name for the first vm. Use monit/monit to login on Monit console. The ActiveMQ broker is supposed to be running and green.
+
+Try the following link to verify the web console of ActiveMQ:
+http://your_vm1_dns:8161/admin
+http://your_vm2_dns:8161/admin
+where the username and password are admin/admin. Click on the link of Connection
+s to verify the network connectors
+
+9) You should use your JMS client to connect to either brokers to test. Here are the urls for testing:
+tcp://your_vm1_dns:61616
+tcp://your_vm2_dns:61616
+You can use guest/password to connect to the brokers.
+
+Congratulations! You have set up an active-active cluster of ActiveMQ with network of two brokers. You should use Monit page to stop/start either brokers to test failover scenarios. Here is a very good article about network brokers of ActiveMQ:
+
+http://akuntamukkala.blogspot.com/2014/02/activemq-network-of-brokers-explained.html
+
+If you have JMS tools to send and receive messages, use them in your tests. Otherwise, you can provision an EC2 instance with QBroker and run the failover tests on it.
+
+10) run the following command to provision an EC2 instance with QBroker for tests on failover scenarios:
+
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=qbroker provision.yml
+
+Once it is done, open two ssh sessions to the box as follows:
+
+$ ssh -i ~/.ssh/your.pem ubuntu@your_vm3_dns
+
+where your_vm3_dns is the hostname for the newly provisioned EC2 instance. You are going to run the test cases on these two ssh windows.
+
+11) send some messages to one of broker while receive messages from the other broker:
+
+On the first ssh window, run the following command to receive messages from the broker on the first EC2 instance:
+
+$ /opt/qbroker/bin/QClient.sh -i MSG_OUT -u tcp://your_vm1_dns:61616 -c QueueConnectionFactory -h guest -m password -d 6 -r -G
+
+where it starts a JMS consumer as a daemon. Check ActiveMQ web console on the first instance and verify its connection to the broker.
+
+On the other window, run the following command to send a message to the broker on the other EC2 instance:
+
+$ echo test123 | /opt/qbroker/bin/QClient.sh -o MSG_OUT -U tcp://your_vm2_dns:61616 -C QueueConnectionFactory -H guest -M password -D 6
+
+Run this command multiple times and watch the window for the consumer. The consumer is supposed to receive all the messages even though it connects to a different broker. Check ActiveMQ web console on both brokers. Verify number of messages consumed or produced on the give queue.
+
+On the window of consumer, enter ctrl + c to stop the consumer process.
+
+12) test failover scenarios with both consumer and producer running using the failover URL
+
+Run the following command to set up environment variable with failover URL on both ssh windows, similar to follwoing line:
+
+$ export FO_URL="failover:(tcp://ec2-18-222-26-90.us-east-2.compute.amazonaws.com:61616,tcp://ec2-3-17-148-60.us-east-2.compute.amazonaws.com:61616)"
+
+Make sure to replace the hostnames in the line with the correct dns names created at Step 6.
+
+On the first window, start the consumer with following command lines:
+
+$ sudo rm /tmp/amq.log
+$ /opt/qbroker/bin/QClient.sh -i MSG_OUT -u $FO_URL -c QueueConnectionFactory -h guest -m password -U log:///tmp/amq.log -O append -S 5 -d 6 -r -G
+
+where it listens to the queue and appends the msg content to the log file: /tmp/amq.log.
+
+On the other window, run following command to start the producer:
+
+$ cat /etc/ssh/moduli | /opt/qbroker/bin/QClient.sh -i - -B 0x0a -g 250 -o MSG_OUT -U $FO_URL -C QueueConnectionFactory -H guest -M password -S 5 -D 6
+
+This will read the file line by line. For every line, it will send a message to the destination.
+
+While both producer and consumer are running, use Monit webpage to stop/start brokers one at a time. They are supposed to be working continuously with failover. Once the producer stops, enter ctrl + c to stop the consumer.
+
+Check ActiveMQ web consoles on the connections and queues.
+
+Run following command to compare the two files:
+
+$ diff /tmp/amq.log /etc/ssh/moduli
+
+There should be no difference even though brokers were restarted during the test. It means there is no loss of messages.
+
+You can also use AWS console to reboot one of the instances for ActiveMQ to simular a failure while both producer and consumer are running.
+
+Clean up the log file:
+
+$ rm /tmp/amq.log
+
+13) destroy all 3 vms
+
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=qbroker terminate.yml
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=activemq terminate.yml
+
+14) check AWS EC2 Console at the region of us-east-2 to make sure it is gone

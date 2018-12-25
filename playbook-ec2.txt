@@ -1,0 +1,117 @@
+Hands-on session for Ansible:
+
+1) install ansible first
+$ sudo easy_install pip
+$ sudo -H pip install ansible
+$ sudo -H pip install boto
+$ sudo -H pip install boto3
+$ sudo -H pip uninstall python-dateutil
+$ sudo -H pip install python-dateutil==2.2
+
+It is recommended to install Ansible 2.3.1 since all the playbooks are tested with Ansible 2.3.1.
+
+2) set up ~/.aws/credentials with your access_key and secret_key as follows:
+[default]
+aws_access_key_id = xxxx
+aws_secret_access_key = yyyy
+
+where xxxx and yyyy are the keys for your AWS account.
+
+3) set up the environment variable to disable ansible to check host key:
+$ export ANSIBLE_HOST_KEY_CHECKING=False
+
+4) create your ssh key pair or upload your ssh public key on AWS EC2 Console for the region. The default region for this lab is us-east-2. If you want to run lab tests on us-east-1, you need to provide vpc_id, etc to override the default variables. Make sure you write down the name for your ssh key-pair. It will be used for the variable of key_name in the command line.
+
+5) clone the playbook from github
+$ git clone https://github.com/yannanlu/playbook-ec2.git
+
+Since the repo has a bunch of submodules, make sure to run following commands to get them updated:
+$ git submodule init
+$ git submodule update --recursive --remote
+
+If you have the repo cloned already, make suer to update it with the following commands:
+$ git pull
+$ git submodule update --recursive --remote
+
+6) run the playbook to provision an EC2 instance with the idservice and PostgreSQL configured. Tomcat and Nginx are used as the web frontend.
+
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=idservice provision.yml
+
+make sure to replace your.pem with the file name to your ssh private key and the value for the key_name
+
+7) check outputs for errors and write down the public dns of the vm, verify it on the AWS console at the region of us-east-2
+
+8) verify the service via the web pages and ssh:
+
+Point your browser to the following url to login into monit page:
+https://your_vm_dns:2812
+make sure to replace your_vm_dns with the public dns name for the vm. Use monit/monit to login on Monit console. All the applications are supposed to be running and green.
+
+Try this link on your browser and refresh multiple times:
+https://your_vm_dns/idservice/date.jsp
+where the timestamp is supposed to update with each click.
+
+Try this link on your browser to query the event_id for "x:y:z":
+https://your_vm_dns/idservice/rest/id/event?name=x:y:z
+where the response should be a json with the event_id.
+
+Run this ssh command to login on the remote vm:
+$ ssh -i ~/.ssh/your.pem ubuntu@your_vm_dns
+make sure to replace your_vm_dns with the public dns name for the vm
+
+9) To demonstrate the playbook is idempotent, please run the playbook once more and watch the outputs on the screen to see if there is anything changed:
+
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=idservice provision.yml
+
+where the total changed should be 0, similar as follows:
+PLAY RECAP *********************************************************************
+ec2-18-222-27-71.us-east-2.compute.amazonaws.com : ok=80   changed=0    unreachable=0    failed=0   
+localhost                  : ok=5    changed=0    unreachable=0    failed=0
+
+10) destroy the vm
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name terminate.yml
+
+11) check AWS EC2 Console at the region of us-east-2 to make sure it is gone
+
+12) run the playbook to provision an EC2 instance with ActiveMQ and mbservice configured. Tomcat and Apache are used as the web frontend:
+
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=mbservice -e web_frontend=apache provision.yml
+
+make sure to replace your.pem with the file name to your ssh private key and the value for the key_name.
+
+13) check outputs for errors and write down the public dns of the vm, verify it on the AWS console at the region of us-east-2.
+
+14) verify the service via the web pages and ssh:
+
+Point your browser to the following url to login into monit page:
+https://your_vm_dns:2812
+make sure to replace your_vm_dns with the public dns name for the vm. Use monit/monit to login on Monit console. All the applications are supposed to be running and green.
+
+Try this link on your browser and refresh multiple times:
+https://your_vm_dns/mbservice/date.jsp
+where the timestamp is supposed to update with each click.
+
+Use curl to send a xml request to the message gateway:
+$ curl -XPUT -ks https://your_vm_dns/mbservice/rest/gw/request.xml -H "Content-Type: text/xml" -d @request.xml
+
+Here is the url to access the admin console of ActiveMQ
+https://your_vm_dns/admin
+Log in the console with the username of "admin" and the password of "admin". Click on the link of Queue to verify there is one message in the queue.
+
+Run this ssh command to login on the remote vm:
+$ ssh -i ~/.ssh/your.pem ubuntu@your_vm_dns
+make sure to replace your_vm_dns with the public dns name for the vm.
+
+15) To demonstrate the playbook is idempotent, please run the playbook once more and watch the outputs on the screen to see if there is anything changed:
+
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name -e wrapper_service=mbservice -e web_frontend=apache provision.yml
+
+where the total changed should be 0, similar as follows:
+PLAY RECAP *********************************************************************
+ec2-18-222-27-71.us-east-2.compute.amazonaws.com : ok=80   changed=0    unreachable=0    failed=0   
+localhost                  : ok=5    changed=0    unreachable=0    failed=0
+
+16) destroy the vm
+$ ansible-playbook -i hosts -e pem_file=~/.ssh/your.pem -e key_name=your_key_name terminate.yml
+
+17) check AWS EC2 Console at the region of us-east-2 to make sure it is gone
