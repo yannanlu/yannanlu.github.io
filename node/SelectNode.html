@@ -128,7 +128,7 @@ Here are complete properties of rulesets for SelectNode.
 <TD> Pattern </TD> <TD> string </TD> <TD> optional </TD> <TD> pattern to select items </TD> <TD> [^;]+;? </TD>
 </TR>
 <TR>
-<TD> XPathExpression </TD> <TD> string </TD> <TD> optional </TD> <TD> xpath expression to select items </TD> <TD> //book[author="Neal Stephenson"]/title/text() </TD>
+<TD> XPath </TD> <TD> string </TD> <TD> optional </TD> <TD> xpath expression to select items </TD> <TD> //book[author="Neal Stephenson"]/title/text() </TD>
 </TR>
 <TR>
 <TD> CheckNameSpace </TD> <TD> string of true or false </TD> <TD> optional </TD> <TD> flag to check name space for XML </TD> <TD> (default: false) </TD>
@@ -239,7 +239,7 @@ Here is an example to select items via XPath.
     "JMSPropertyGroup": [{
       "JMSType": "^xml$"
     }],
-    "XPathExpression": "//Monitor/text()"
+    "XPath": "//Monitor/text()"
   }],
   ...
 }

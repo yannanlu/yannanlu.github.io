@@ -37,10 +37,9 @@ a ruleset so that the message header will be reset for modifications.  Its value
 is 0 for no reset, 1 for optional reset and 2 for guaranteed reset.
 </p>
 <p>
-If TargetXPathExpression is defined, the URI will be treated as the path to
-another xml file on the disk. The xml content specified by
-SourceXPathExpression will be merged into the XML payload of the message at
-the position specified by TargetXPathExpression.
+If TargetXPath is defined, the URI will be treated as the path to another xml
+file on the disk. The xml content specified by SourceXPath will be merged into
+the XML payload of the message at the position specified by TargetXPath.
 </p>
 <p>
 XSLTNode always adds an extra ruleset for the nohit messages.
@@ -95,10 +94,10 @@ Here are complete properties of rulesets for XSLTNode.
 <TD> XSLParameter </TD> <TD> map </TD> <TD> optional </TD> <TD> for setting xsl parameters from the messages </TD> <TD> see example </TD>
 </TR>
 <TR>
-<TD> TargetXPathExpression </TD> <TD> string </TD> <TD> mandatory for merge </TD> <TD> to select the nodeset from the xml payload for merging position </TD> <TD> see example </TD>
+<TD> TargetXPath </TD> <TD> string </TD> <TD> mandatory for merge </TD> <TD> to select the nodeset from the xml payload for merging position </TD> <TD> see example </TD>
 </TR>
 <TR>
-<TD> SourceXPathExpression </TD> <TD> string </TD> <TD> optional for merge </TD> <TD> to select the nodeset from the source xml for merge </TD> <TD> see example </TD>
+<TD> SourceXPath </TD> <TD> string </TD> <TD> optional for merge </TD> <TD> to select the nodeset from the source xml for merge </TD> <TD> see example </TD>
 </TR>
 <TR>
 <TD> PreferredOutLink </TD> <TD> alphanumeric with no spaces </TD> <TD> mandatory for bypass only </TD> <TD> name of the preferred outlink </TD> <TD> bypass </TD>
@@ -184,8 +183,8 @@ Here is an example of the merge ruleset.
       "FileName": "."
     }],
     "URITemplate": "##FileName##",
-    "TargetXPathExpression": "/*/Name",
-    "SourceXPathExpression": "/*/*",
+    "TargetXPath": "/*/Name",
+    "SourceXPath": "/*/*",
   },{
     ...
   }],
