@@ -12,6 +12,5 @@ org.qbroker.net
 org.qbroker.node
 org.qbroker.persister
 org.qbroker.receiver
-org.qbroker.servlet
 org.qbroker.sonicmq
 org.qbroker.wmq
