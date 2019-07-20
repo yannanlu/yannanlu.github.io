@@ -436,10 +436,12 @@ Alternatively, SimpleHttpServer can be embedded as AdminServer as follows:
   "AdminServer": {
     "Name": "admin",
     "ClassName": "org.qbroker.net.SimpleHttpServer",
-    "URI": "http://localhost:6627/admin/jms",
+    "URI": "https://localhost:6627/admin/jms",
     "Operation": "handle",
     "Capacity": "64",
     "Partition": "0,32",
+    "KeyStoreFile": "/opt/qbroker/agent/keystore.jks",
+    "KeyStorePassword": "xxxx",
     "Timeout": "10",
     "RestartScript": "/bin/bash -c \"/opt/qbroker/bin/agentctl restart &\""
   },
