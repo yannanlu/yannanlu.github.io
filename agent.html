@@ -442,6 +442,7 @@ Alternatively, SimpleHttpServer can be embedded as AdminServer as follows:
     "Partition": "0,32",
     "KeyStoreFile": "/opt/qbroker/agent/keystore.jks",
     "KeyStorePassword": "xxxx",
+    "TrustAllCertificates": "true",
     "Timeout": "10",
     "RestartScript": "/bin/bash -c \"/opt/qbroker/bin/agentctl restart &\""
   },
@@ -449,6 +450,8 @@ Alternatively, SimpleHttpServer can be embedded as AdminServer as follows:
 }
 </PRE>
 </p>
+where TrustAllCertificates is set to true for client queries in case 
+keystore.jks is self signed.
 <p>
 Here is an example of definition for a MessageFlow:
 <PRE>
