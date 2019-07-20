@@ -429,6 +429,25 @@ where URI is the ServerReceiver's access point, and Operation specifies the
 service for the AdminServer.  The Parser defines the protocol of communication.
 </p>
 <p>
+Alternatively, SimpleHttpServer can be embedded as AdminServer as follows:
+<PRE>
+{
+  ...
+  "AdminServer": {
+    "Name": "admin",
+    "ClassName": "org.qbroker.net.SimpleHttpServer",
+    "URI": "http://localhost:6627/admin/jms",
+    "Operation": "handle",
+    "Capacity": "64",
+    "Partition": "0,32",
+    "Timeout": "10",
+    "RestartScript": "/bin/bash -c \"/opt/qbroker/bin/agentctl restart &\""
+  },
+  ...
+}
+</PRE>
+</p>
+<p>
 Here is an example of definition for a MessageFlow:
 <PRE>
 {
