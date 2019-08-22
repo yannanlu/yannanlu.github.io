@@ -2,13 +2,11 @@ Hands-on session for Ansible:
 
 1) install Ansible Core first
 $ sudo easy_install pip
-$ sudo -H pip install ansible==2.3.1
+$ sudo -H pip install ansible==2.6.0
 $ sudo -H pip install boto
 $ sudo -H pip install boto3
-$ sudo -H pip uninstall python-dateutil
-$ sudo -H pip install python-dateutil==2.2
 
-It is recommended to install Ansible 2.3.1 since all the playbooks are tested with Ansible 2.3.1.
+It is recommended to install Ansible 2.6.0 since all the playbooks are tested with Ansible 2.6.0.
 
 2) set up ~/.aws/credentials with your access_key and secret_key as follows:
 [default]
