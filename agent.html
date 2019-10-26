@@ -409,31 +409,6 @@ Here is an example of the AdminServer's definition:
 {
   ...
   "AdminServer": {
-    "ClassName": "org.qbroker.receiver.ServerReceiver",
-    "URI": "tcp://localhost:6627",
-    "Operation": "respond",
-    "Capacity": "64",
-    "Partition": "0,32",
-    "EOTBytes": "0x0a",
-    "TextMode": "1",
-    "Template": "##body##\n",
-    "Parser": {
-      "ClassName": "org.qbroker.event.EventParser"
-    },
-    "RestartScript": "/bin/bash -c \"/opt/qbroker/bin/agentctl restart &\""
-  },
-  ...
-}
-</PRE>
-where URI is the ServerReceiver's access point, and Operation specifies the
-service for the AdminServer.  The Parser defines the protocol of communication.
-</p>
-<p>
-Alternatively, SimpleHttpServer can be embedded as AdminServer as follows:
-<PRE>
-{
-  ...
-  "AdminServer": {
     "Name": "admin",
     "ClassName": "org.qbroker.net.SimpleHttpServer",
     "URI": "https://localhost:6627/admin/jms",
