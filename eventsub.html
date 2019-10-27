@@ -11,22 +11,23 @@ EventSubscription and its Configurations
 </CENTER>
 <p>
 EventFlow is a centralized Event pub/sub service. The end users can subscribe
-events based on their interests on the event content. Once there is an
+events based on their interests on the content of events. Once there is an
 incoming event htting a subscription, EventFlow will invoke the actions
 associated with the subscription and delivers the event to the customers
-in thier customized format.
+in their customized format.
 </p>
 <p>
 EventSubscription is an object of ConfigList that represents a list of
-configurations of three types of rulesets, Subscriptions for EventDispatcher,
-Correlations for EventCorrlator and Escalations for EventMonitor. It has the
-short name of <b>Sub</b>. On WebAdmin, Sub may have multiple services.
-Each of the service will have one PropertyMonitor as the hook in the workflow
-of EventFlow. For example, devteam is a service of <b>Sub</b>. It is
-corresponding to the ruleset of the same name in node_dispatcher. Each service
-has its own master configuration file, <b>Sub.json</b>, which lists all the
-names of the items. The detail of an item is defined in a separate file.
-Here is an example of the master configuration file, <b>Sub.json</b>:
+configurations that is one of three types of rulesets, Subscriptions for
+EventDispatcher, Correlations for EventCorrlator and Escalations for
+EventMonitor. It has the short name of <b>Sub</b>. On WebAdmin, a Sub may have
+multiple services. Each of the service will have one PropertyMonitor as the
+hook in the workflow of EventFlow. For example, devteam is a service of
+<b>Sub</b>. It is corresponding to the ruleset of the same name in
+node_dispatcher. Each service has its own master configuration file,
+<b>Sub.json</b>, which lists all the names of the items. The detail of an item
+is defined in a separate file. Here is an example of the master configuration
+file, <b>Sub.json</b>:
 </p>
 <pre>
 {
@@ -42,11 +43,11 @@ Here is an example of the master configuration file, <b>Sub.json</b>:
 }
 </pre>
 <p>
-This example lists 3 rulesets. The first one is mail_dev, a subscription,
-which will be added to node_dispatcher. The second one is all_dev,
-a correlation, which will be added to node_correlation. The third is for_dev,
-an escalation, which will be added to node_monitor. As the end users, you can
-add new subcriptions, remove the old ones or modify the existing ones.
+This example has listed all 3 types of rulesets. The first one is mail_dev,
+a subscription, which will be added to node_dispatcher. The second one is
+all_dev, a correlation, which will be added to node_correlation. The third is
+for_dev, an escalation, which will be added to node_monitor. As the end users,
+you can add new subcriptions, remove the old ones or modify the existing ones.
 Once the change is made, just make sure to publish all the changes first.
 Then publish the master configuration file also, no matter if it has been
 changed or not. 
@@ -132,7 +133,7 @@ is interested in the CRIT events of category <TT>WMQ</TT> only after the work.
 You just need to add two entries on category and priority to the rule, and
 specify the active timewindow for the subscription. As long as the subscription
 is well defined, EventFlow will deliver the events to the user in a 
-customized format. Therefore, EventFlow is a broker that dispatches
+customizable format. Therefore, EventFlow is a broker that dispatches
 events to their subscribers.
 </p>
 <p>
@@ -159,8 +160,8 @@ The most important thing is to know what properties are available for
 certain types of events and their meanings.  The developers are supposed to
 document the data schema on each types of events.  If there is no such
 documentation, you still are able to figure them out by simply subscribing 
-the events with a universal match rule. Once an event is delivered to you,
-you will be able to see all its properties.
+the events with a universal matching rule. Once an event is delivered to you,
+you will be able to see the all properties.
 </p>
 
 <a NAME="Template"></a>
@@ -393,18 +394,18 @@ to the master configuration file, <b>Sub.json</b>, as one of the Subscriptions:
 Correlation is a ruleset used by EventCorrelator node to group or partition
 incoming events for event correlations.  Sometimes, EventFlow gets a big
 spike of events and customers get hundreds of alerts due to some kind of
-large-scale outages.  Those events are just symptoms.  There may be just
-a few root causes behind them.  With EventCorrelator node, EventFlow
-will be able to aggregate those events and create a few new events reflecting
-the root causes.  The customers can subscribe the newly created events and
-get more accurate alerts.  Currently, this feature is still in experiment.
+large-scale outages.  Those events are just symptoms.  There may be just a few
+root causes behind them.  With EventCorrelator node, EventFlow will be able to
+aggregate those events within session windows and create a few new events
+reflecting the root causes. The customers can subscribe the newly created events
+and get more accurate alerts.  Currently, this feature is still in experiment.
 It is mainly used to merge multiple related events into a single event to
 reduce the volume of the alerts.
 </p>
 <p>
 You can have as many correlations as you want.  Each correlation can has its own
 configuration file named after its name plus ".json" extension. The name of
-every correlation should be unique in the scope of EventFlow.  Here is an
+each correlation should be unique in the scope of EventFlow.  Here is an
 example of correlations set up to merge all events on NFS services:  
 </p>
 <pre>
@@ -416,7 +417,8 @@ example of correlations set up to merge all events on NFS services:
   "Category": "NFS",
   "Description": "event correlation on all JCMS NFS disks",
   "MinimumEventCount": "2",
-  "EventExpiration": "900",
+  "SummaryHeader": "Date  Priority  Name  Status  Hostname  Text\n",
+  "SummaryTemplate": "##date## ##priority## ##name## ##status## ##hostname## ##text##\n",
   "EventPattern": [{
     "priority": "^(ERR|CRIT)$",
     "hostname": "^jcmsprod\\d+$",
@@ -425,8 +427,7 @@ example of correlations set up to merge all events on NFS services:
   }],
   "XEventPattern": [{
     "status": "^[eE]xception$"
-  }],
-  "Summary": ["date", "priority", "name", "status", "hostname", "text"]
+  }]
 }
 </pre>
 <p>
@@ -444,9 +445,9 @@ to the master configuration file, <b>Sub.json</b>, as one of the Correlations:
 </pre>
 
 <p>
-Even though Correlation also has the EventPattern and similar actions like
+Even though Correlation has also the EventPattern and similar actions like
 a Subscription, it is not designed to work on individual events.  Its job
-is to select the related events out of the incoming events and aggregate
+is to select the related events from the incoming events and aggregate
 upon all of them.  It then publishes a new event as the result of the action.
 </p>
 
@@ -463,7 +464,7 @@ sessions and manage them on events.
 <p>
 Most of the modern monitors send only one alert for a well defined failure.
 There is no follow-ups nor reminders even if the failure still persists.
-If the users have missed this alert, there may be a big concequence. Most
+If the users have missed that alert, there may be a big concequence. Most
 of the customers ask for the reminding or escalating feature. So that if
 the problem has not been closed or acknowledged within certain time, their
 managers or oncalls should get an escalated notification. With Escalation,
