@@ -591,9 +591,16 @@ ConfigList is the hook linking the external rulesets to the nodes of
 EventFlow.
 </p>
 <p>
+In order for a list of external rulesets to work on a workflow, the admin has
+to set up the hook with the workflow first. In most cases, EventFlow will be
+used to host the event pub/sub service. Within the flow, an instance of
+EventDispacher node is supposed to be configured. The rule of ConfigList should
+be added to that specific node as the external rule.
+</p>
+<p>
 For example, the dev team wants to subscribe the alerts from their
-applications. So we can set up an instance of ConfigList for the dev team.
-Here is the example:
+applications. So we can set up an external ruleset of ConfigList for the them.
+Here is the example of the rule:
 </p>
 <pre>
 {
@@ -650,23 +657,32 @@ Here is the example:
 }
 </pre>
 <p>
-As you can see, this example defines an instance of PropertyMonitor with its
-URI pointing to the repository for devteam's subscriptions. Once it is
-deployed, the EventFlow will download the list of configuration for devteam's
-subscriptions periodically. Those subscriptions should be defined in the
-service of devteam under the application of <b>Sub</b>. If another team wants
-a dedicated repository for their subscriptions, the admin just need to create
-a new hook similar to that of devteam for them.
+where the keyword, RuleType, has the value of <b>ConfigList</b>. It indicates
+the rule is a set of external rules. As you can see, this example defines an
+instance of PropertyMonitor with its URI pointing to the repository for
+devteam's subscriptions. Once the flow is reloaded on demand, the node will
+download the list of configurations from the given URI and refreshes those rules
+dynamically. Since those subscriptions are defined in a dedicated service of
+devteam under the different application of <b>Sub</b>, they can be managed with 
+a different set of policies. If another team wants to manage their own
+subscriptions, the admin just need to create a new service of Sub and a new
+hook similar to that of devteam for them.
 </p>
 <p>
-For management of external subscriptions, please check
+Once the hook is set up by the admin, the end users should be able to manage
+their subscriptions with the WebAmdin console. They can add, remove, modify
+their subscriptions on the WebAdmin console. Once a change is made, it must
+be published to the repository. Otherwise, that change will not be visible to
+the flow. Since the flow is not configured to reload the changes automatically,
+the end users are supposed to reload the service of Sub on Deployment view.
+For details of management on external subscriptions, please check
 <a href="eventsub.html"> EventSubscription </a>.
 </p>
 
 <a NAME="Todo"></a>
 <h2> Todo list </h2>
 <p>
-EventFlow is part of QBroker, an open source project at
+EventFlow is a part of QBroker, an open source project at
 <a href="http://github.com/yannanlu/qbroker">GitHub</a>.
 </p>
 
