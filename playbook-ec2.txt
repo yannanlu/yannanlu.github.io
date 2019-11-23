@@ -21,15 +21,7 @@ $ export ANSIBLE_HOST_KEY_CHECKING=False
 4) create your ssh key pair or upload your ssh public key on AWS EC2 Console for the region. The default region for this lab is us-east-2. If you want to run lab tests on us-east-1, you need to provide vpc_id, etc to override the default variables. Make sure you write down the name for your ssh key-pair. It will be used for the variable of key_name in the command line.
 
 5) clone the playbook from github
-$ git clone https://github.com/yannanlu/playbook-ec2.git
-
-Since the repo has a bunch of submodules, make sure to run following commands to get them updated:
-$ git submodule init
-$ git submodule update --recursive --remote
-
-If you have the repo cloned already, make suer to update it with the following commands:
-$ git pull
-$ git submodule update --recursive --remote
+$ git clone --recurse-submodules https://github.com/yannanlu/playbook-ec2.git
 
 6) run the playbook to provision an EC2 instance with the idservice and PostgreSQL configured. Tomcat and Nginx are used as the web frontend.
 
