@@ -9,43 +9,42 @@
 </CENTER>
 
 <p>
-MonitorNode is a monitor container hosting dynamic monitor instances.
+MonitorNode is a monitor container hosting dynamic monitor instances on demand.
 It listens to an input XQueue for JMS messages as requests to monitor certain
-occurrences.  If the message contains a request for a new monitor, it will
-create the monitor instance according to the ruleset and the content.  Upon
-success, the incoming message will be routed to the outlink of bypass. If it
-fails to create the object, the message will be routed to the outlink of
-failure.  If there is no ruleset to handle the message, it will be routed to
-the outlink of nohit.  Meanwhile, MonitorNode periodically sends all active
-monitor instances as tasks to the outlink of pool. On the other end of the
-outlink, a number of MonitorPersisters will be listening on the outlink for
-tasks. They will run each monitor tasks and updates the results for the tasks.
-Each task will be collected for evaluations on its result. MonitorNode will
-apply the predefined EventPattern on the ruleset to chech the result.  If the
-result is as expected,  MonitorNode will generate a new message and routes it
-to the outlink of done.  Then the monitor will be terminated and the monitor
-instance will be destroyed.
+occurrences. If the message contains a request for a new monitor, MonitorNode
+will create a monitor instance according to the ruleset and the content of the
+message. Upon success, the incoming message will be routed to the outlink of
+bypass. If it fails to create the monitor instance, the message will be routed
+to the outlink of failure. If there is no ruleset to handle the message, it
+will be routed to the outlink of nohit. Meanwhile, MonitorNode periodically
+dispatches all active monitors as tasks to the outlink of pool. On the other
+end of the outlink, a number of MonitorPersisters will be listening on the
+outlink for tasks. They will run those monitor tasks and update the results on
+the tasks. Each task will be collected by MonitorNode for evaluations on its
+result. MonitorNode will apply the predefined EventPattern of the ruleset to
+check the result. If the result is as expected, MonitorNode will generate a new
+message with the result and routes it to the outlink of done. Then the monitor
+instance will be terminated and destroyed.
 </p>
 <img vspace=10 halign=center src="MonitorNode.jpg" />
 <p>
-MonitorNode also contains a number of predefined rulesets.  These
-rulesets categorize messages into non-overlapping groups via the filters.
-Therefore, each rule defines a unique message group.  If a ruleset is not
-of bypass, it is supposed to define a template to construct properties for
-new monitor instances.  It also contains multiple parameters for the node to
-manage active monitor instances. For example, TimeToLive specifies the lifetime
-in seconds of the new monitor instance. Once the instance passes that time span,
-MonitorNode will escalate the final event and terminates the instance. Option is
-another parameter which controls when to deliver the original request.  By
-default, it is zero and there is no wait on the final event.  If it is 1,
-MonitorNode will hold the request and waits until the final event is
-escalated.  Heartbeat determines how often to run the monitor instance.  The
-non-bypass rulesets may also have a list of EventPatterns to determine when
-to escalate the final event for the occurrence and to terminate the request.
-The total number of active occurrences is stored into the RULE_PEND field.
-For those messages falling off all defined rulesets, MonitorNode always
-creates an extra ruleset, nohit, to handle them.  Therefore all the nohit
-messages will be routed to the outlink of nohit.
+MonitorNode contains a number of predefined rulesets. These rulesets categorize
+messages into non-overlapping groups via the filters. Therefore, each rule
+defines a unique message group. If a ruleset is not of bypass, it is supposed
+to define a template to construct properties for new monitor instances. It also
+contains multiple parameters for the node to manage active monitor instances.
+For example, TimeToLive specifies the lifetime in seconds of the new monitor
+instance. Once the instance passes that time span, MonitorNode will escalate
+the final event and terminates the instance. Option is another parameter which
+controls when to deliver the original request. By default, it is zero and there
+is no wait on the final event. If it is 1, MonitorNode will hold the request
+and waits until the final event is escalated. Heartbeat determines how often to
+run the monitor instance. The non-bypass rulesets may also have a list of
+EventPatterns to determine when to escalate the final event for the occurrence
+and when to terminate the monitor instance. The total number of active monitors
+is stored into the RULE_PEND field. For those messages falling off all defined
+rulesets, MonitorNode always creates an extra ruleset, nohit, to handle them.
+Therefore all the nohit messages will be routed to the outlink of nohit.
 </p>
 <p>
 You are free to choose any names for the five fixed outlinks.  But
@@ -123,10 +122,9 @@ Here are complete properties of rulesets for MonitorNode.
 <TD> DisplayMask </TD> <TD> integer </TD> <TD> optional </TD> <TD> display mask for logging </TD> <TD> 6 (default: 0) </TD>
 </TR>
 </TABLE>
-where Monitor is the configuration template for monitor instances with
-certain variables.  The node will resolve those variables based on the data
-extracted from the request message.  You can find many examples on
-MonitorAgent page.
+where Monitor is the configuration template for monitor instances with certain
+variables. The node will resolve those variables based on the data extracted
+from the request message. You can find many examples on MonitorAgent page.
 </p>
 
 <p>
@@ -257,10 +255,15 @@ Here is an example of MonitorNode:
   }
 }
 </pre>
-where there are two rulesets with different hearteats.  Frequently, the node
-dispatches the active monitors to the pool.  Then it tries to collect the
-events sent from the monitors.  If an event match the EventPattern, the monitor
-will be terminated and a new event will be escalated.
+where there are two rulesets with different hearteats. The properties of the
+monitor instances are defined in the block of Monitor. There are 3 variables,
+<b>##AssetID##</b>, <b>##DirName##</b> and <b>##ZipCode##</b>, in it. Their
+values are supposed to be provided by the request message. It means the request
+message must have those properties well defined, also as required by the filter
+of JMSProppertyGroup. Frequently, the node dispatches the active monitors to
+the pool. Then it tries to collect the events sent from the monitors. If an
+event matches the EventPattern, the monitor will be terminated and a new event
+will be escalated.
 </p>
 
 </body>
