@@ -542,8 +542,8 @@ installation.
 <pre>
 mysql -u root -pxxxx
 > create database qbrokerdb;
-> create user 'qbdba'@localhost identified by 'yyyy';
-> grant all on qbroker.* to 'qbdba';
+> create user 'qbdba'@'localhost' identified by 'yyyy';
+> grant all on qbrokerdb.* to 'qbdba'@'localhost';
 > exit
 </pre>
 where you need to replace <tt>xxxx</tt> with the password for MySQL root
@@ -898,7 +898,7 @@ PANDA:
 <th>REPOSITORY_NAME</th><th>URI</th><th>PATH</th><th>DESCRIPTION</th>
 </tr>
 <tr>
-<td>PANDA</td><td>http://panda:8082</td><td>/www/wdap</td><td>repository for integration team</td>
+<td>PANDA</td><td>http://panda:8082</td><td>/www/wdap</td><td>repository for devops</td>
 </tr>
 </table>
 where <b>URI</b> is for the remote access to the repository, <b>PATH</b>
